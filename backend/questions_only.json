@@ -1,0 +1,42 @@
+[
+  {
+    "question_text": "What is the capital of France?",
+    "option1": "London",
+    "option2": "Paris",
+    "option3": "Berlin",
+    "option4": "Madrid",
+    "correct_option": 2
+  },
+  {
+    "question_text": "What is 2 + 2?",
+    "option1": "3",
+    "option2": "4",
+    "option3": "5",
+    "option4": "6",
+    "correct_option": 2
+  },
+  {
+    "question_text": "Which planet is closest to the Sun?",
+    "option1": "Venus",
+    "option2": "Earth",
+    "option3": "Mercury",
+    "option4": "Mars",
+    "correct_option": 3
+  },
+  {
+    "question_text": "What is the chemical symbol for gold?",
+    "option1": "Ag",
+    "option2": "Au",
+    "option3": "Fe",
+    "option4": "Cu",
+    "correct_option": 2
+  },
+  {
+    "question_text": "Who wrote 'Romeo and Juliet'?",
+    "option1": "Charles Dickens",
+    "option2": "William Shakespeare",
+    "option3": "Jane Austen",
+    "option4": "Mark Twain",
+    "correct_option": 2
+  }
+] 

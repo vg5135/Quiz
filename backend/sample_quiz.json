@@ -1,0 +1,62 @@
+{
+  "subject_name": "Mathematics",
+  "chapter_name": "Algebra",
+  "quizzes": [
+    {
+      "title": "Basic Algebra Quiz",
+      "start_datetime": "2024-12-15T10:00:00",
+      "duration_hours": 1,
+      "duration_minutes": 30,
+      "questions": [
+        {
+          "question_text": "What is 2x + 3 = 7?",
+          "option1": "x = 2",
+          "option2": "x = 3",
+          "option3": "x = 4",
+          "option4": "x = 5",
+          "correct_option": 1
+        },
+        {
+          "question_text": "Solve for y: 3y - 6 = 9",
+          "option1": "y = 3",
+          "option2": "y = 4",
+          "option3": "y = 5",
+          "option4": "y = 6",
+          "correct_option": 3
+        },
+        {
+          "question_text": "What is the value of x in x² = 16?",
+          "option1": "x = 4",
+          "option2": "x = -4",
+          "option3": "x = ±4",
+          "option4": "x = 8",
+          "correct_option": 3
+        }
+      ]
+    },
+    {
+      "title": "Advanced Algebra Quiz",
+      "start_datetime": "2024-12-16T14:00:00",
+      "duration_hours": 2,
+      "duration_minutes": 0,
+      "questions": [
+        {
+          "question_text": "Factorize x² - 4",
+          "option1": "(x + 2)(x - 2)",
+          "option2": "(x + 4)(x - 4)",
+          "option3": "(x + 1)(x - 4)",
+          "option4": "(x + 2)(x + 2)",
+          "correct_option": 1
+        },
+        {
+          "question_text": "What is the slope of the line y = 2x + 3?",
+          "option1": "2",
+          "option2": "3",
+          "option3": "5",
+          "option4": "1",
+          "correct_option": 1
+        }
+      ]
+    }
+  ]
+} 

@@ -38,6 +38,14 @@ export async function apiFetch(path, options = {}) {
   return res.json();
 }
 
+// Chatbot API
+export const sendChatMessage = (message) =>
+  apiFetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+
 // Subjects
 export const getSubjects = () => apiFetch("/api/subjects");
 export const createSubject = (data) =>

@@ -8,12 +8,24 @@
           <p class="page-subtitle">Manage all quizzes in the system</p>
         </div>
         <div class="header-right">
-          <button @click="showCreateModal = true" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
-            </svg>
-            Add New Quiz
-          </button>
+          <div class="dropdown">
+            <button @click="showCreateDropdown = !showCreateDropdown" class="btn btn-primary dropdown-toggle">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
+              </svg>
+            </button>
+            <div v-if="showCreateDropdown" class="dropdown-menu">
+              <button @click="showCreateModal = true; showCreateDropdown = false" class="dropdown-item">
+                <i class="fas fa-edit"></i> Manual Quiz Creation
+              </button>
+              <button @click="showEnhancedModal = true; showCreateDropdown = false" class="dropdown-item">
+                <i class="fas fa-magic"></i> Enhanced Quiz Creation
+              </button>
+              <button @click="showBulkModal = true; showCreateDropdown = false" class="dropdown-item">
+                <i class="fas fa-upload"></i> Bulk Quiz Upload
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -344,12 +356,48 @@
         </form>
       </div>
     </div>
+
+    <!-- Enhanced Quiz Creation Modal -->
+    <div v-if="showEnhancedModal" class="modal-overlay" @click="showEnhancedModal = false">
+      <div class="modal-content large-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Enhanced Quiz Creation</h2>
+          <button @click="showEnhancedModal = false" class="modal-close">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <EnhancedQuizCreation />
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Quiz Creation Modal -->
+    <div v-if="showBulkModal" class="modal-overlay" @click="showBulkModal = false">
+      <div class="modal-content large-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Bulk Quiz Creation</h2>
+          <button @click="showBulkModal = false" class="modal-close">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <BulkQuizCreation />
+        </div>
+      </div>
+    </div>
   </AdminLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import AdminLayout from './AdminLayout.vue';
+import EnhancedQuizCreation from './EnhancedQuizCreation.vue';
+import BulkQuizCreation from './BulkQuizCreation.vue';
 import { getQuizzes, createQuiz as createQuizAPI, deleteQuiz as deleteQuizAPI, updateQuiz as updateQuizAPI, toggleQuiz, getSubjects, getChapters } from '../../api';
 
 // Reactive data
@@ -363,6 +411,9 @@ const statusFilter = ref('');
 const selectedQuizzes = ref([]);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
+const showCreateDropdown = ref(false);
+const showEnhancedModal = ref(false);
+const showBulkModal = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = 10;
 const errorMessage = ref('');
@@ -1246,5 +1297,79 @@ onMounted(() => {
   .form-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Dropdown Styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.dropdown-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: #333;
+  font-size: 14px;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.dropdown-item i {
+  width: 16px;
+  color: #667eea;
+}
+
+/* Large Modal Styles */
+.large-modal {
+  max-width: 1000px;
+  width: 90vw;
+}
+
+.modal-body {
+  padding: 24px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 </style>

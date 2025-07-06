@@ -1,11 +1,25 @@
 from flask import Blueprint, jsonify, request, render_template
-from flask_jwt_extended import create_access_token, decode_token, get_jwt, jwt_required
+from flask_jwt_extended import create_access_token, decode_token, get_jwt, jwt_required, verify_jwt_in_request
 from models import db, bcrypt, Subject, Quiz, Question, Score, User, Chapter
 from rbac import role_required
+from chatbot import chatbot
 import datetime
+import json
+import os
+from werkzeug.utils import secure_filename
 
 # Define IST timezone
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+# File upload configuration
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'json', 'txt'}
+
+# Ensure upload folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 routes = Blueprint('routes', __name__)
 
@@ -939,3 +953,494 @@ def debug_quizzes():
         debug_info['quizzes'].append(quiz_info)
     
     return jsonify(debug_info)
+
+# Chatbot endpoint
+@routes.route('/api/chat', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)
+def chat():
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        return response, 200
+    
+    try:
+        data = request.json
+        user_message = data.get('message', '').strip()
+        
+        if not user_message:
+            return jsonify({"message": "Please provide a message"}), 400
+        
+        # Get user context if available
+        user_context = {}
+        try:
+            jwt_data = get_jwt()
+            user_email = jwt_data.get('sub')
+            if user_email:
+                user = User.query.filter_by(email=user_email).first()
+                if user:
+                    user_context = {
+                        'role': user.role,
+                        'name': user.full_name,
+                        'email': user.email
+                    }
+        except:
+            pass  # Continue without user context if JWT is invalid
+        
+        # Get response from chatbot
+        response = chatbot.get_response(user_message, user_context)
+        
+        return jsonify({
+            "message": response,
+            "timestamp": datetime.datetime.now(IST).isoformat()
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in chat endpoint: {str(e)}")
+        return jsonify({
+            "message": "Sorry, I encountered an error. Please try again.",
+            "timestamp": datetime.datetime.now(IST).isoformat()
+        }), 500
+
+# Enhanced Quiz Creation Routes
+
+# Bulk Quiz Creation with JSON File Upload
+@routes.route('/api/bulk-create-quiz', methods=['POST', 'OPTIONS'])
+def bulk_create_quiz():
+    """
+    Create multiple quizzes from a JSON file upload
+    Expected JSON format:
+    {
+        "subject_name": "Mathematics",
+        "chapter_name": "Algebra",
+        "quizzes": [
+            {
+                "title": "Basic Algebra Quiz",
+                "start_datetime": "2024-01-15T10:00:00",
+                "duration_hours": 1,
+                "duration_minutes": 30,
+                "questions": [
+                    {
+                        "question_text": "What is 2x + 3 = 7?",
+                        "option1": "x = 2",
+                        "option2": "x = 3",
+                        "option3": "x = 4",
+                        "option4": "x = 5",
+                        "correct_option": 1
+                    }
+                ]
+            }
+        ]
+    }
+    """
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        return response, 200
+    
+    # Verify role for POST requests
+    verify_jwt_in_request()
+    claims = get_jwt()
+    if claims['role'] != 'admin':
+        return jsonify(msg="Access denied"), 403
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Invalid file type. Only JSON files are allowed."}), 400
+        
+        # Read and parse JSON file
+        try:
+            data = json.load(file)
+        except json.JSONDecodeError as e:
+            return jsonify({"error": f"Invalid JSON format: {str(e)}"}), 400
+        
+        # Validate required fields
+        required_fields = ['subject_name', 'chapter_name', 'quizzes']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+        
+        # Find or create subject
+        subject = Subject.query.filter_by(name=data['subject_name']).first()
+        if not subject:
+            subject = Subject(
+                name=data['subject_name'],
+                description=f"Subject: {data['subject_name']}"
+            )
+            db.session.add(subject)
+            db.session.commit()
+        
+        # Find or create chapter
+        chapter = Chapter.query.filter_by(
+            name=data['chapter_name'],
+            subject_id=subject.id
+        ).first()
+        if not chapter:
+            chapter = Chapter(
+                name=data['chapter_name'],
+                description=f"Chapter: {data['chapter_name']}",
+                subject_id=subject.id
+            )
+            db.session.add(chapter)
+            db.session.commit()
+        
+        created_quizzes = []
+        errors = []
+        
+        for quiz_data in data['quizzes']:
+            try:
+                # Parse start datetime
+                start_datetime = datetime.datetime.fromisoformat(quiz_data['start_datetime'].replace('Z', '+00:00'))
+                if start_datetime.tzinfo is None:
+                    start_datetime = start_datetime.replace(tzinfo=IST)
+                else:
+                    start_datetime = start_datetime.astimezone(IST)
+                
+                # Create quiz
+                quiz = Quiz(
+                    title=quiz_data['title'],
+                    chapter_id=chapter.id,
+                    start_datetime=start_datetime,
+                    duration_hours=int(quiz_data.get('duration_hours', 0)),
+                    duration_minutes=int(quiz_data.get('duration_minutes', 30))
+                )
+                db.session.add(quiz)
+                db.session.flush()  # Get quiz ID
+                
+                # Create questions
+                for question_data in quiz_data.get('questions', []):
+                    question = Question(
+                        quiz_id=quiz.id,
+                        question_text=question_data['question_text'],
+                        option1=question_data['option1'],
+                        option2=question_data['option2'],
+                        option3=question_data['option3'],
+                        option4=question_data['option4'],
+                        correct_option=int(question_data['correct_option'])
+                    )
+                    db.session.add(question)
+                
+                created_quizzes.append({
+                    'id': quiz.id,
+                    'title': quiz.title,
+                    'questions_count': len(quiz_data.get('questions', []))
+                })
+                
+            except Exception as e:
+                errors.append(f"Error creating quiz '{quiz_data.get('title', 'Unknown')}': {str(e)}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Successfully created {len(created_quizzes)} quizzes",
+            "created_quizzes": created_quizzes,
+            "errors": errors if errors else None
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error processing file: {str(e)}"}), 500
+
+# Enhanced Quiz Creation with File Upload for Questions
+@routes.route('/api/create-quiz-with-questions', methods=['POST', 'OPTIONS'])
+def create_quiz_with_questions():
+    """
+    Create a quiz with questions from form data or file upload
+    Supports both manual question entry and file upload (JSON/TXT)
+    """
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'POST,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        return response, 200
+    
+    # Verify role for POST requests
+    verify_jwt_in_request()
+    claims = get_jwt()
+    if claims['role'] != 'admin':
+        return jsonify(msg="Access denied"), 403
+    
+    try:
+        # Get quiz details from form
+        quiz_data = {
+            'title': request.form.get('title'),
+            'subject_id': int(request.form.get('subject_id')),
+            'chapter_id': int(request.form.get('chapter_id')),
+            'start_datetime': request.form.get('start_datetime'),
+            'duration_hours': int(request.form.get('duration_hours', 0)),
+            'duration_minutes': int(request.form.get('duration_minutes', 30))
+        }
+        
+        # Validate quiz data
+        if not all([quiz_data['title'], quiz_data['subject_id'], quiz_data['chapter_id'], quiz_data['start_datetime']]):
+            return jsonify({"error": "Missing required quiz information"}), 400
+        
+        # Parse start datetime
+        try:
+            start_datetime = datetime.datetime.fromisoformat(quiz_data['start_datetime'].replace('Z', '+00:00'))
+            if start_datetime.tzinfo is None:
+                start_datetime = start_datetime.replace(tzinfo=IST)
+            else:
+                start_datetime = start_datetime.astimezone(IST)
+        except Exception as e:
+            return jsonify({"error": f"Invalid start_datetime format: {str(e)}"}), 400
+        
+        # Create quiz
+        quiz = Quiz(
+            title=quiz_data['title'],
+            chapter_id=quiz_data['chapter_id'],
+            start_datetime=start_datetime,
+            duration_hours=quiz_data['duration_hours'],
+            duration_minutes=quiz_data['duration_minutes']
+        )
+        db.session.add(quiz)
+        db.session.flush()  # Get quiz ID
+        
+        questions_created = 0
+        errors = []
+        
+        # Handle questions from file upload
+        if 'questions_file' in request.files:
+            file = request.files['questions_file']
+            if file.filename != '' and allowed_file(file.filename):
+                try:
+                    if file.filename.endswith('.json'):
+                        # Parse JSON questions
+                        questions_data = json.load(file)
+                        if isinstance(questions_data, list):
+                            for question_data in questions_data:
+                                try:
+                                    question = Question(
+                                        quiz_id=quiz.id,
+                                        question_text=question_data['question_text'],
+                                        option1=question_data['option1'],
+                                        option2=question_data['option2'],
+                                        option3=question_data['option3'],
+                                        option4=question_data['option4'],
+                                        correct_option=int(question_data['correct_option'])
+                                    )
+                                    db.session.add(question)
+                                    questions_created += 1
+                                except Exception as e:
+                                    errors.append(f"Error creating question: {str(e)}")
+                        else:
+                            errors.append("JSON file should contain an array of questions")
+                    
+                    elif file.filename.endswith('.txt'):
+                        # Parse TXT questions (simple format)
+                        content = file.read().decode('utf-8')
+                        lines = content.strip().split('\n')
+                        
+                        current_question = None
+                        for line in lines:
+                            line = line.strip()
+                            if not line:
+                                continue
+                            
+                            if line.startswith('Q:'):
+                                # Save previous question if exists
+                                if current_question and all(k in current_question for k in ['question_text', 'option1', 'option2', 'option3', 'option4', 'correct_option']):
+                                    try:
+                                        question = Question(
+                                            quiz_id=quiz.id,
+                                            question_text=current_question['question_text'],
+                                            option1=current_question['option1'],
+                                            option2=current_question['option2'],
+                                            option3=current_question['option3'],
+                                            option4=current_question['option4'],
+                                            correct_option=int(current_question['correct_option'])
+                                        )
+                                        db.session.add(question)
+                                        questions_created += 1
+                                    except Exception as e:
+                                        errors.append(f"Error creating question: {str(e)}")
+                                
+                                # Start new question
+                                current_question = {'question_text': line[2:].strip()}
+                            
+                            elif line.startswith('A:') and current_question:
+                                current_question['option1'] = line[2:].strip()
+                            elif line.startswith('B:') and current_question:
+                                current_question['option2'] = line[2:].strip()
+                            elif line.startswith('C:') and current_question:
+                                current_question['option3'] = line[2:].strip()
+                            elif line.startswith('D:') and current_question:
+                                current_question['option4'] = line[2:].strip()
+                            elif line.startswith('Correct:') and current_question:
+                                correct_letter = line[8:].strip().upper()
+                                correct_map = {'A': 1, 'B': 2, 'C': 3, 'D': 4}
+                                if correct_letter in correct_map:
+                                    current_question['correct_option'] = correct_map[correct_letter]
+                        
+                        # Save last question
+                        if current_question and all(k in current_question for k in ['question_text', 'option1', 'option2', 'option3', 'option4', 'correct_option']):
+                            try:
+                                question = Question(
+                                    quiz_id=quiz.id,
+                                    question_text=current_question['question_text'],
+                                    option1=current_question['option1'],
+                                    option2=current_question['option2'],
+                                    option3=current_question['option3'],
+                                    option4=current_question['option4'],
+                                    correct_option=int(current_question['correct_option'])
+                                )
+                                db.session.add(question)
+                                questions_created += 1
+                            except Exception as e:
+                                errors.append(f"Error creating question: {str(e)}")
+                
+                except Exception as e:
+                    errors.append(f"Error processing file: {str(e)}")
+        
+        # Handle manual questions from form
+        manual_questions = request.form.get('manual_questions', '')
+        if manual_questions:
+            try:
+                questions_list = json.loads(manual_questions)
+                for question_data in questions_list:
+                    try:
+                        question = Question(
+                            quiz_id=quiz.id,
+                            question_text=question_data['question_text'],
+                            option1=question_data['option1'],
+                            option2=question_data['option2'],
+                            option3=question_data['option3'],
+                            option4=question_data['option4'],
+                            correct_option=int(question_data['correct_option'])
+                        )
+                        db.session.add(question)
+                        questions_created += 1
+                    except Exception as e:
+                        errors.append(f"Error creating manual question: {str(e)}")
+            except json.JSONDecodeError:
+                errors.append("Invalid JSON format for manual questions")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Quiz created successfully with {questions_created} questions",
+            "quiz": {
+                "id": quiz.id,
+                "title": quiz.title,
+                "questions_count": questions_created
+            },
+            "errors": errors if errors else None
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error creating quiz: {str(e)}"}), 500
+
+# Get quiz creation template
+@routes.route('/api/quiz-template', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)  # Make JWT optional for CORS preflight
+def get_quiz_template():
+    """
+    Return a template for quiz creation
+    """
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        return response, 200
+    
+    # Check admin role only for GET requests
+    try:
+        jwt_data = get_jwt()
+        user_email = jwt_data.get('sub')
+        if user_email:
+            user = User.query.filter_by(email=user_email).first()
+            if not user or user.role != 'admin':
+                return jsonify({"error": "Admin access required"}), 403
+    except:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    template = {
+        "subject_name": "Example Subject",
+        "chapter_name": "Example Chapter",
+        "quizzes": [
+            {
+                "title": "Example Quiz",
+                "start_datetime": "2024-01-15T10:00:00",
+                "duration_hours": 1,
+                "duration_minutes": 30,
+                "questions": [
+                    {
+                        "question_text": "What is 2 + 2?",
+                        "option1": "3",
+                        "option2": "4",
+                        "option3": "5",
+                        "option4": "6",
+                        "correct_option": 2
+                    }
+                ]
+            }
+        ]
+    }
+    
+    return jsonify(template)
+
+# Get TXT format template
+@routes.route('/api/txt-template', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)  # Make JWT optional for CORS preflight
+def get_txt_template():
+    """
+    Return a template for TXT format questions
+    """
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        return response, 200
+    
+    # Check admin role only for GET requests
+    try:
+        jwt_data = get_jwt()
+        user_email = jwt_data.get('sub')
+        if user_email:
+            user = User.query.filter_by(email=user_email).first()
+            if not user or user.role != 'admin':
+                return jsonify({"error": "Admin access required"}), 403
+    except:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    template = """Q: What is the capital of France?
+A: London
+B: Paris
+C: Berlin
+D: Madrid
+Correct: B
+
+Q: What is 2 + 2?
+A: 3
+B: 4
+C: 5
+D: 6
+Correct: B
+
+Q: Which planet is closest to the Sun?
+A: Venus
+B: Earth
+C: Mercury
+D: Mars
+Correct: C"""
+    
+    return jsonify({"template": template})

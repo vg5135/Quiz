@@ -1,5 +1,5 @@
 import flask
-from flask import Flask
+from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from models import db, User, bcrypt
@@ -9,7 +9,7 @@ import os
 app = Flask(__name__)
 
 # Enable CORS for all routes with proper configuration
-CORS(app, origins=["http://localhost:5174", "http://127.0.0.1:5174"], 
+CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"], 
      supports_credentials=True,
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization"])

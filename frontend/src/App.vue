@@ -1,8 +1,10 @@
 <template>
   <router-view />
+  <Chatbot />
 </template>
 
 <script setup>
+import Chatbot from './components/Chatbot.vue';
 // No logic needed here, router-view only
 </script>
 

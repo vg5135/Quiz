@@ -1,576 +1,1250 @@
 <template>
   <AdminLayout>
-    <div class="container-fluid py-4 bg-light min-vh-100">
-      <div class="card shadow-lg border-0 mx-auto mb-4" style="max-width: 900px">
-        <div class="card-body">
-          <h2 class="text-center mb-4 fw-bold text-primary">
-            Quizzes Management
-          </h2>
-          <h5 class="fw-semibold mb-3">Add New Quiz</h5>
-          <form
-            class="row g-3 align-items-end"
-            @submit.prevent="createQuizHandler"
-          >
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">Quiz Title</label>
-              <input
-                v-model="newQuiz.title"
-                class="form-control"
-                placeholder="Quiz Title"
-                required
-              />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label fw-semibold">Subject</label>
-              <select v-model="newQuiz.subject_id" class="form-select" required @change="onSubjectChange">
-                <option disabled value="">Select Subject</option>
-                <option
-                  v-for="subject in subjects"
-                  :key="subject.id"
-                  :value="subject.id"
-                >
-                  {{ subject.name }}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label fw-semibold">Chapter</label>
-              <select v-model="newQuiz.chapter_id" class="form-select" required :disabled="!newQuiz.subject_id">
-                <option disabled value="">{{ newQuiz.subject_id ? 'Select Chapter' : 'Select Subject First' }}</option>
-                <option
-                  v-for="chapter in filteredChapters"
-                  :key="chapter.id"
-                  :value="chapter.id"
-                >
-                  {{ chapter.name }}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label fw-semibold">Start Date & Time</label>
-              <input
-                v-model="newQuiz.start_datetime"
-                type="datetime-local"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label fw-semibold">Hours</label>
-              <input
-                v-model.number="newQuiz.duration_hours"
-                type="number"
-                min="0"
-                class="form-control"
-                placeholder="Hours"
-              />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label fw-semibold">Minutes</label>
-              <input
-                v-model.number="newQuiz.duration_minutes"
-                type="number"
-                min="0"
-                max="59"
-                class="form-control"
-                placeholder="Minutes"
-              />
-            </div>
-            <div class="col-md-4 offset-md-8">
-              <button
-                type="submit"
-                class="btn btn-gradient-primary btn-sm w-100 fw-bold mt-3"
-              >
-                <i class="bi bi-plus-circle me-2"></i>Add Quiz
-              </button>
-            </div>
-          </form>
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1 class="page-title">Quiz Management</h1>
+          <p class="page-subtitle">Manage all quizzes in the system</p>
+        </div>
+        <div class="header-right">
+          <button @click="showCreateModal = true" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
+            </svg>
+            Add New Quiz
+          </button>
         </div>
       </div>
-      <div class="card shadow-lg border-0 mx-auto" style="max-width: 1400px">
-        <div class="card-body">
-          <h5 class="fw-semibold mb-3">All Quizzes</h5>
-          <div class="table-responsive">
-            <table
-              class="table table-hover align-middle bg-white rounded shadow-sm"
-            >
-              <thead class="table-primary sticky-top">
-                <tr>
-                  <th>Title</th>
-                  <th>Subject</th>
-                  <th>Chapter</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Duration</th>
-                  <th>Status</th>
-                  <th class="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="quiz in quizzes" :key="quiz.id">
-                  <template v-if="editId !== quiz.id">
-                    <td class="fw-semibold">{{ quiz.title }}</td>
-                    <td>{{ getSubjectNameFromChapter(quiz.chapter_id) }}</td>
-                    <td>{{ getChapterName(quiz.chapter_id) }}</td>
-                    <td>{{ formatDisplayDateTime(quiz.start_datetime) }}</td>
-                    <td>{{ formatDisplayDateTime(quiz.end_datetime) }}</td>
-                    <td>{{ quiz.duration_hours }}h {{ quiz.duration_minutes }}m</td>
-                    <td><span :class="getStatusBadge(quiz.status).class">{{ getStatusBadge(quiz.status).text }}</span></td>
-                    <td class="text-center">
-                      <button
-                        class="btn btn-outline-primary btn-sm me-2"
-                        @click="editQuiz(quiz)"
-                      >
-                        <i class="bi bi-pencil"></i> 
-                      </button>
-                      <button
-                        class="btn btn-outline-warning btn-sm me-2"
-                        @click="toggleQuizHandler(quiz.id)"
-                        :title="quiz.status === 'active' ? 'Deactivate Quiz' : 'Activate Quiz'"
-                      >
-                        <i class="bi" :class="quiz.status === 'active' ? 'bi-pause-circle' : 'bi-play-circle'"></i>
-                      </button>
-                      <button
-                        class="btn btn-outline-danger btn-sm"
-                        @click="deleteQuizHandler(quiz.id)"
-                      >
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </td>
-                  </template>
-                  <template v-else>
-                    <td>
-                      <input
-                        v-model="editQuizData.title"
-                        class="form-control form-control-sm"
-                      />
-                    </td>
-                    <td>
-                      <select
-                        v-model="editQuizData.subject_id"
-                        class="form-select form-select-sm"
-                        @change="onEditSubjectChange"
-                      >
-                        <option
-                          v-for="subject in subjects"
-                          :key="subject.id"
-                          :value="subject.id"
-                        >
-                          {{ subject.name }}
-                        </option>
-                      </select>
-                    </td>
-                    <td>
-                      <select
-                        v-model="editQuizData.chapter_id"
-                        class="form-select form-select-sm"
-                        :disabled="!editQuizData.subject_id"
-                      >
-                        <option disabled value="">{{ editQuizData.subject_id ? 'Select Chapter' : 'Select Subject First' }}</option>
-                        <option
-                          v-for="chapter in filteredEditChapters"
-                          :key="chapter.id"
-                          :value="chapter.id"
-                        >
-                          {{ chapter.name }}
-                        </option>
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        v-model="editQuizData.start_datetime"
-                        type="datetime-local"
-                        class="form-control form-control-sm"
-                      />
-                    </td>
-                    <td>
-                      <div class="row g-1">
-                        <div class="col-6">
-                          <input
-                            v-model.number="editQuizData.duration_hours"
-                            type="number"
-                            min="0"
-                            class="form-control form-control-sm"
-                            placeholder="Hours"
-                          />
-                        </div>
-                        <div class="col-6">
-                          <input
-                            v-model.number="editQuizData.duration_minutes"
-                            type="number"
-                            min="0"
-                            max="59"
-                            class="form-control form-control-sm"
-                            placeholder="Minutes"
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span :class="getStatusBadge(editQuizData.status).class">
-                        {{ getStatusBadge(editQuizData.status).text }}
-                      </span>
-                    </td>
-                    <td class="text-center">
-                      <button
-                        class="btn btn-success btn-sm me-2"
-                        @click="updateQuizHandler(quiz.id)"
-                      >
-                        <i class="bi bi-check-circle"></i> Save
-                      </button>
-                      <button
-                        class="btn btn-secondary btn-sm"
-                        @click="cancelEdit"
-                      >
-                        <i class="bi bi-x-circle"></i> Cancel
-                      </button>
-                    </td>
-                  </template>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    </div>
+
+    <!-- Error and Success Messages -->
+    <div v-if="errorMessage" class="message error-message">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.48 2 2 6.48 2 12S6.47 22 11.99 22C17.52 22 22 17.52 22 12S17.52 2 11.99 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+      </svg>
+      {{ errorMessage }}
+      <button @click="errorMessage = ''" class="message-close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+
+    <div v-if="successMessage" class="message success-message">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" fill="currentColor"/>
+      </svg>
+      {{ successMessage }}
+      <button @click="successMessage = ''" class="message-close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="filters-section">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z" fill="currentColor"/>
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search quizzes by title..."
+          class="search-input"
+        />
+      </div>
+      <div class="filter-options">
+        <select v-model="subjectFilter" class="filter-select">
+          <option value="">All Subjects</option>
+          <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
+            {{ subject.name }}
+          </option>
+        </select>
+        <select v-model="statusFilter" class="filter-select">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Quizzes Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <div class="table-actions">
+          <label class="checkbox-wrapper">
+            <input 
+              type="checkbox" 
+              :checked="allSelected" 
+              @change="toggleSelectAll"
+              class="checkbox"
+            />
+            <span class="checkmark"></span>
+          </label>
+          <span class="selected-count" v-if="selectedQuizzes.length > 0">
+            {{ selectedQuizzes.length }} selected
+          </span>
         </div>
+        <div class="table-actions-right">
+          <button 
+            v-if="selectedQuizzes.length > 0"
+            @click="deleteSelected" 
+            class="btn btn-danger btn-sm"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="currentColor"/>
+            </svg>
+            Delete Selected
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="checkbox-column">
+                <label class="checkbox-wrapper">
+                  <input 
+                    type="checkbox" 
+                    :checked="allSelected" 
+                    @change="toggleSelectAll"
+                    class="checkbox"
+                  />
+                  <span class="checkmark"></span>
+                </label>
+              </th>
+              <th>Title</th>
+              <th>Subject</th>
+              <th>Chapter</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Duration</th>
+              <th>Status</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="quiz in filteredQuizzes" :key="quiz.id" class="table-row">
+              <td class="checkbox-column">
+                <label class="checkbox-wrapper">
+                  <input 
+                    type="checkbox" 
+                    :value="quiz.id"
+                    v-model="selectedQuizzes"
+                    class="checkbox"
+                  />
+                  <span class="checkmark"></span>
+                </label>
+              </td>
+              <td>
+                <div class="quiz-title">{{ quiz.title }}</div>
+              </td>
+              <td>{{ getSubjectNameFromChapter(quiz.chapter_id) }}</td>
+              <td>{{ getChapterName(quiz.chapter_id) }}</td>
+              <td>{{ formatDisplayDateTime(quiz.start_datetime) }}</td>
+              <td>{{ formatDisplayDateTime(quiz.end_datetime) }}</td>
+              <td>{{ quiz.duration_hours }}h {{ quiz.duration_minutes }}m</td>
+              <td>
+                <span class="status-badge" :class="`status-${quiz.status}`">
+                  {{ quiz.status }}
+                </span>
+              </td>
+              <td class="actions-column">
+                <div class="action-buttons">
+                  <button @click="editQuiz(quiz)" class="btn btn-icon btn-info" title="Edit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z" fill="currentColor"/>
+                    </svg>
+                  </button>
+                  <button @click="toggleQuizStatus(quiz)" class="btn btn-icon btn-warning" :title="quiz.status === 'active' ? 'Deactivate' : 'Activate'">
+                    <svg v-if="quiz.status === 'active'" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 19H18V7H6V19ZM8 9H16V17H8V9Z" fill="currentColor"/>
+                    </svg>
+                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M8 5V19L19 12L8 5Z" fill="currentColor"/>
+                    </svg>
+                  </button>
+                  <button @click="deleteQuiz(quiz.id)" class="btn btn-icon btn-danger" title="Delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="currentColor"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <div class="page-info">
+          Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ filteredQuizzes.length }} quizzes
+        </div>
+        <div class="pagination-controls">
+          <button 
+            @click="previousPage" 
+            :disabled="currentPage === 1"
+            class="btn btn-secondary btn-sm"
+          >
+            Previous
+          </button>
+          <span class="page-numbers">
+            Page {{ currentPage }} of {{ totalPages }}
+          </span>
+          <button 
+            @click="nextPage" 
+            :disabled="currentPage === totalPages"
+            class="btn btn-secondary btn-sm"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading quizzes...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="filteredQuizzes.length === 0" class="empty-state">
+      <div class="empty-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V5H19V19ZM7 10H9V17H7V10ZM11 7H13V17H11V7ZM15 13H17V17H15V13Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <h3>No quizzes found</h3>
+      <p>Try adjusting your search or filter criteria</p>
+    </div>
+
+    <!-- Create Quiz Modal -->
+    <div v-if="showCreateModal" class="modal-overlay" @click="showCreateModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Create New Quiz</h2>
+          <button @click="showCreateModal = false" class="modal-close">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="createQuiz" class="modal-form">
+          <div class="form-group">
+            <label>Quiz Title</label>
+            <input v-model="newQuiz.title" type="text" required class="form-input" placeholder="Enter quiz title" />
+          </div>
+          <div class="form-group">
+            <label>Subject</label>
+            <select v-model="newQuiz.subject_id" required class="form-select" @change="onSubjectChange">
+              <option value="">Select Subject</option>
+              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
+                {{ subject.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Chapter</label>
+            <select v-model="newQuiz.chapter_id" required class="form-select" :disabled="!newQuiz.subject_id">
+              <option value="">Select Chapter</option>
+              <option v-for="chapter in filteredChapters" :key="chapter.id" :value="chapter.id">
+                {{ chapter.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Start Date & Time</label>
+            <input v-model="newQuiz.start_datetime" type="datetime-local" required class="form-input" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Duration (Hours)</label>
+              <input v-model.number="newQuiz.duration_hours" type="number" min="0" class="form-input" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Duration (Minutes)</label>
+              <input v-model.number="newQuiz.duration_minutes" type="number" min="0" max="59" class="form-input" placeholder="0" />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="showCreateModal = false" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Create Quiz
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Quiz Modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click="showEditModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Edit Quiz</h2>
+          <button @click="showEditModal = false" class="modal-close">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="handleUpdateQuiz" class="modal-form">
+          <div class="form-group">
+            <label>Quiz Title</label>
+            <input v-model="editingQuiz.title" type="text" required class="form-input" placeholder="Enter quiz title" />
+          </div>
+          <div class="form-group">
+            <label>Subject</label>
+            <select v-model="editingQuiz.subject_id" required class="form-select" @change="onEditSubjectChange">
+              <option value="">Select Subject</option>
+              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
+                {{ subject.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Chapter</label>
+            <select v-model="editingQuiz.chapter_id" required class="form-select" :disabled="!editingQuiz.subject_id">
+              <option value="">Select Chapter</option>
+              <option v-for="chapter in filteredEditChapters" :key="chapter.id" :value="chapter.id">
+                {{ chapter.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Start Date & Time</label>
+            <input v-model="editingQuiz.start_datetime" type="datetime-local" required class="form-input" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Duration (Hours)</label>
+              <input v-model.number="editingQuiz.duration_hours" type="number" min="0" class="form-input" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Duration (Minutes)</label>
+              <input v-model.number="editingQuiz.duration_minutes" type="number" min="0" max="59" class="form-input" placeholder="0" />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="showEditModal = false" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Update Quiz
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </AdminLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
-import {
-  getQuizzes,
-  createQuiz,
-  updateQuiz,
-  deleteQuiz,
-  toggleQuiz,
-  getChapters,
-  getSubjects,
-} from "../../api";
+import { ref, computed, onMounted } from 'vue';
 import AdminLayout from './AdminLayout.vue';
+import { getQuizzes, createQuiz as createQuizAPI, deleteQuiz as deleteQuizAPI, updateQuiz as updateQuizAPI, toggleQuiz, getSubjects, getChapters } from '../../api';
 
+// Reactive data
 const quizzes = ref([]);
-const chapters = ref([]);
 const subjects = ref([]);
+const chapters = ref([]);
+const loading = ref(true);
+const searchQuery = ref('');
+const subjectFilter = ref('');
+const statusFilter = ref('');
+const selectedQuizzes = ref([]);
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
+const currentPage = ref(1);
+const itemsPerPage = 10;
+const errorMessage = ref('');
+const successMessage = ref('');
+
 const newQuiz = ref({
-  title: "",
-  subject_id: "",
-  chapter_id: "",
-  start_datetime: "",
-  end_datetime: "",
+  title: '',
+  subject_id: '',
+  chapter_id: '',
+  start_datetime: '',
   duration_hours: 0,
-  duration_minutes: 30,
+  duration_minutes: 0
 });
-const editId = ref(null);
-const editQuizData = ref({});
 
-const fetchQuizzes = async () => {
-  quizzes.value = await getQuizzes();
-};
-const fetchChapters = async () => {
-  chapters.value = await getChapters();
-};
-const fetchSubjects = async () => {
-  subjects.value = await getSubjects();
-};
+const editingQuiz = ref({
+  id: '',
+  title: '',
+  subject_id: '',
+  chapter_id: '',
+  start_datetime: '',
+  duration_hours: 0,
+  duration_minutes: 0
+});
 
-// Computed property for filtered chapters based on selected subject
+// Computed properties
+const filteredQuizzes = computed(() => {
+  let filtered = quizzes.value;
+  
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(quiz => 
+      quiz.title?.toLowerCase().includes(query)
+    );
+  }
+  
+  if (subjectFilter.value) {
+    filtered = filtered.filter(quiz => {
+      const chapter = chapters.value.find(c => c.id === quiz.chapter_id);
+      return chapter && chapter.subject_id === subjectFilter.value;
+    });
+  }
+  
+  if (statusFilter.value) {
+    filtered = filtered.filter(quiz => quiz.status === statusFilter.value);
+  }
+  
+  return filtered;
+});
+
+const paginatedQuizzes = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filteredQuizzes.value.slice(start, end);
+});
+
+const totalPages = computed(() => Math.ceil(filteredQuizzes.value.length / itemsPerPage));
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
+const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage, filteredQuizzes.value.length));
+
+const allSelected = computed(() => {
+  return paginatedQuizzes.value.length > 0 && selectedQuizzes.value.length === paginatedQuizzes.value.length;
+});
+
 const filteredChapters = computed(() => {
   if (!newQuiz.value.subject_id) return [];
   return chapters.value.filter(chapter => chapter.subject_id === newQuiz.value.subject_id);
 });
 
-// Computed property for filtered chapters in edit mode
 const filteredEditChapters = computed(() => {
-  if (!editQuizData.value.subject_id) return [];
-  return chapters.value.filter(chapter => chapter.subject_id === editQuizData.value.subject_id);
+  if (!editingQuiz.value.subject_id) return [];
+  return chapters.value.filter(chapter => chapter.subject_id === editingQuiz.value.subject_id);
 });
 
-const formatDateTime = (dt) => {
-  // Converts 'YYYY-MM-DDTHH:MM' to 'YYYY-MM-DD HH:MM'
-  if (!dt) return "";
-  return dt.replace("T", " ");
-};
-
-const formatDateTimeForInput = (isoString) => {
-  // Converts ISO string to datetime-local input format
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:MM
-};
-
-const formatDisplayDateTime = (isoString) => {
-  if (!isoString) return "Not set";
-  const date = new Date(isoString);
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-};
-
-const getStatusBadge = (status) => {
-  const statusConfig = {
-    'active': { text: '🟢 Active', class: 'badge bg-success' },
-    'upcoming': { text: '🟡 Upcoming', class: 'badge bg-warning' },
-    'expired': { text: '🔴 Expired', class: 'badge bg-danger' },
-    'inactive': { text: '⚪ Inactive', class: 'badge bg-secondary' }
-  };
-  return statusConfig[status] || statusConfig['inactive'];
-};
-
-const createQuizHandler = async () => {
+// Methods
+const fetchData = async () => {
   try {
-    const payload = {
-      title: newQuiz.value.title,
-      chapter_id: Number(newQuiz.value.chapter_id),
-      duration_hours: Number(newQuiz.value.duration_hours),
-      duration_minutes: Number(newQuiz.value.duration_minutes),
-      start_datetime: formatDateTime(newQuiz.value.start_datetime),
-    };
-    await createQuiz(payload);
-    newQuiz.value = {
-      title: "",
-      subject_id: "",
-      chapter_id: "",
-      start_datetime: "",
-      end_datetime: "",
-      duration_hours: 0,
-      duration_minutes: 30,
-    };
-    await fetchQuizzes();
+    loading.value = true;
+    const [quizzesData, subjectsData, chaptersData] = await Promise.all([
+      getQuizzes(),
+      getSubjects(),
+      getChapters()
+    ]);
+    
+    quizzes.value = quizzesData;
+    subjects.value = subjectsData;
+    chapters.value = chaptersData;
   } catch (error) {
-    console.error("Error creating quiz:", error);
-    alert("Error creating quiz. Please try again.");
+    console.error('Error fetching data:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
-const deleteQuizHandler = async (id) => {
-  console.log("Delete button clicked for quiz ID:", id);
-  
-  if (confirm("Are you sure you want to delete this quiz? This action cannot be undone.")) {
-    try {
-      console.log("User confirmed deletion. Proceeding to delete quiz with ID:", id);
-      const result = await deleteQuiz(id);
-      console.log("Delete result:", result);
-      await fetchQuizzes();
-      alert("Quiz deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting quiz:", error);
-      console.error("Error details:", {
-        message: error.message,
-        status: error.status,
-        response: error.response
-      });
-      
-      let errorMessage = "Error deleting quiz. Please try again.";
-      
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.response && error.response.data && error.response.data.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      alert(errorMessage);
+const createQuiz = async () => {
+  try {
+    errorMessage.value = '';
+    console.log('Creating quiz with data:', newQuiz.value); // Debug log
+    
+    // Validate required fields
+    if (!newQuiz.value.title || !newQuiz.value.chapter_id || !newQuiz.value.start_datetime) {
+      errorMessage.value = 'Please fill in all required fields.';
+      return;
     }
-  } else {
-    console.log("User cancelled deletion");
+    
+    const createData = {
+      title: newQuiz.value.title.trim(),
+      chapter_id: newQuiz.value.chapter_id,
+      start_datetime: newQuiz.value.start_datetime,
+      duration_hours: parseInt(newQuiz.value.duration_hours) || 0,
+      duration_minutes: parseInt(newQuiz.value.duration_minutes) || 30
+    };
+    
+    console.log('Sending create data:', createData); // Debug log
+    
+    await createQuizAPI(createData);
+    successMessage.value = 'Quiz created successfully!';
+    showCreateModal.value = false;
+    newQuiz.value = {
+      title: '',
+      subject_id: '',
+      chapter_id: '',
+      start_datetime: '',
+      duration_hours: 0,
+      duration_minutes: 0
+    };
+    await fetchData();
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 3000);
+  } catch (error) {
+    console.error('Error creating quiz:', error);
+    console.error('Error response:', error.response); // Debug log
+    errorMessage.value = error.response?.data?.message || 'Failed to create quiz. Please try again.';
+  }
+};
+
+const deleteQuiz = async (quizId) => {
+  if (confirm('Are you sure you want to delete this quiz?')) {
+    try {
+      await deleteQuizAPI(quizId);
+      await fetchData();
+      selectedQuizzes.value = selectedQuizzes.value.filter(id => id !== quizId);
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+    }
+  }
+};
+
+const deleteSelected = async () => {
+  if (confirm(`Are you sure you want to delete ${selectedQuizzes.value.length} quizzes?`)) {
+    try {
+      for (const quizId of selectedQuizzes.value) {
+        await deleteQuizAPI(quizId);
+      }
+      await fetchData();
+      selectedQuizzes.value = [];
+    } catch (error) {
+      console.error('Error deleting quizzes:', error);
+    }
   }
 };
 
 const editQuiz = (quiz) => {
-  console.log("Editing quiz:", quiz);
-  editId.value = quiz.id;
-  editQuizData.value = { ...quiz };
-  // Set the subject_id based on the chapter's subject
-  const chapter = chapters.value.find(ch => ch.id === quiz.chapter_id);
-  if (chapter) {
-    editQuizData.value.subject_id = chapter.subject_id;
-  }
+  console.log('Editing quiz:', quiz); // Debug log
+  
   // Format datetime for input fields
-  editQuizData.value.start_datetime = formatDateTimeForInput(quiz.start_datetime);
-  editQuizData.value.end_datetime = formatDateTimeForInput(quiz.end_datetime);
-  console.log("Edit data set:", editQuizData.value);
+  const formatDateTimeForInput = (dateTime) => {
+    if (!dateTime) return '';
+    try {
+      const date = new Date(dateTime);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:MM
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
+
+  editingQuiz.value = {
+    id: quiz.id,
+    title: quiz.title || '',
+    subject_id: getSubjectIdFromChapter(quiz.chapter_id),
+    chapter_id: quiz.chapter_id || '',
+    start_datetime: formatDateTimeForInput(quiz.start_datetime),
+    duration_hours: parseInt(quiz.duration_hours) || 0,
+    duration_minutes: parseInt(quiz.duration_minutes) || 0
+  };
+  
+  console.log('Formatted editing quiz:', editingQuiz.value); // Debug log
+  showEditModal.value = true;
 };
 
-const updateQuizHandler = async (id) => {
+const handleUpdateQuiz = async () => {
   try {
-    console.log("Updating quiz with ID:", id);
-    console.log("Update data:", editQuizData.value);
+    errorMessage.value = '';
+    console.log('Updating quiz with data:', editingQuiz.value); // Debug log
     
-    const payload = {
-      title: editQuizData.value.title,
-      chapter_id: Number(editQuizData.value.chapter_id),
-      duration_hours: Number(editQuizData.value.duration_hours),
-      duration_minutes: Number(editQuizData.value.duration_minutes),
-      start_datetime: formatDateTime(editQuizData.value.start_datetime),
+    // Validate required fields
+    if (!editingQuiz.value.title || !editingQuiz.value.chapter_id || !editingQuiz.value.start_datetime) {
+      errorMessage.value = 'Please fill in all required fields.';
+      return;
+    }
+    
+    const updateData = {
+      title: editingQuiz.value.title.trim(),
+      chapter_id: editingQuiz.value.chapter_id,
+      start_datetime: editingQuiz.value.start_datetime,
+      duration_hours: parseInt(editingQuiz.value.duration_hours) || 0,
+      duration_minutes: parseInt(editingQuiz.value.duration_minutes) || 0
     };
     
-    console.log("Payload being sent:", payload);
-    const result = await updateQuiz(id, payload);
-    console.log("Update result:", result);
+    console.log('Sending update data:', updateData); // Debug log
     
-    editId.value = null;
-    await fetchQuizzes();
-    alert("Quiz updated successfully!");
+    await updateQuizAPI(editingQuiz.value.id, updateData);
+    successMessage.value = 'Quiz updated successfully!';
+    showEditModal.value = false;
+    await fetchData();
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 3000);
   } catch (error) {
-    console.error("Error updating quiz:", error);
-    alert(`Error updating quiz: ${error.message || 'Unknown error'}`);
+    console.error('Error updating quiz:', error);
+    console.error('Error response:', error.response); // Debug log
+    
+    if (error.response?.data?.message) {
+      errorMessage.value = error.response.data.message;
+    } else if (error.message) {
+      errorMessage.value = error.message;
+    } else {
+      errorMessage.value = 'Failed to update quiz. Please try again.';
+    }
   }
 };
 
-const cancelEdit = () => {
-  editId.value = null;
+const toggleQuizStatus = async (quiz) => {
+  try {
+    console.log(`Toggling quiz ${quiz.id} status`); // Debug log
+    
+    // Use the toggle endpoint instead of update
+    await toggleQuiz(quiz.id);
+    successMessage.value = 'Quiz status toggled successfully!';
+    await fetchData();
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 3000);
+  } catch (error) {
+    console.error('Error toggling quiz status:', error);
+    errorMessage.value = error.response?.data?.message || 'Failed to toggle quiz status. Please try again.';
+  }
 };
 
-const getChapterName = (id) => {
-  const chapter = chapters.value.find((ch) => ch.id === id);
-  return chapter ? chapter.name : "";
+const toggleSelectAll = () => {
+  if (allSelected.value) {
+    selectedQuizzes.value = [];
+  } else {
+    selectedQuizzes.value = paginatedQuizzes.value.map(quiz => quiz.id);
+  }
 };
 
-const getSubjectName = (id) => {
-  const subject = subjects.value.find((s) => s.id === id);
-  return subject ? subject.name : "";
+const previousPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
 };
 
-const getSubjectNameFromChapter = (chapterId) => {
-  const chapter = chapters.value.find((ch) => ch.id === chapterId);
-  return chapter ? getSubjectName(chapter.subject_id) : "";
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
 };
 
 const onSubjectChange = () => {
-  // Reset chapter selection when subject changes
-  newQuiz.value.chapter_id = "";
+  newQuiz.value.chapter_id = '';
 };
 
 const onEditSubjectChange = () => {
-  // Reset chapter selection when subject changes in edit mode
-  editQuizData.value.chapter_id = "";
+  editingQuiz.value.chapter_id = '';
 };
 
-const toggleQuizHandler = async (id) => {
-  try {
-    await toggleQuiz(id);
-    await fetchQuizzes();
-  } catch (error) {
-    console.error("Error toggling quiz:", error);
-    alert("Error toggling quiz status. Please try again.");
-  }
+const getSubjectNameFromChapter = (chapterId) => {
+  const chapter = chapters.value.find(c => c.id === chapterId);
+  if (!chapter) return 'N/A';
+  const subject = subjects.value.find(s => s.id === chapter.subject_id);
+  return subject ? subject.name : 'N/A';
 };
 
-// Temporary test function to debug delete issue
-const testDelete = async (id) => {
-  console.log("=== DELETE TEST ===");
-  console.log("Quiz ID:", id);
-  console.log("Current quizzes:", quizzes.value);
-  console.log("Quiz to delete:", quizzes.value.find(q => q.id === id));
-  
-  try {
-    console.log("Testing API call...");
-    const result = await deleteQuiz(id);
-    console.log("API call successful:", result);
-  } catch (error) {
-    console.error("API call failed:", error);
-  }
+const getChapterName = (chapterId) => {
+  const chapter = chapters.value.find(c => c.id === chapterId);
+  return chapter ? chapter.name : 'N/A';
+};
+
+const formatDisplayDateTime = (dateTime) => {
+  if (!dateTime) return 'N/A';
+  return new Date(dateTime).toLocaleString();
+};
+
+const getSubjectIdFromChapter = (chapterId) => {
+  const chapter = chapters.value.find(c => c.id === chapterId);
+  return chapter ? chapter.subject_id : '';
 };
 
 onMounted(() => {
-  fetchQuizzes();
-  fetchChapters();
-  fetchSubjects();
+  fetchData();
 });
 </script>
 
 <style scoped>
-@import "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css";
-@import "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css";
+/* Page Header */
+.page-header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
+  width: 100%;
+}
 
-.btn-gradient-primary {
-  background: linear-gradient(90deg, #3182ce 0%, #63b3ed 100%);
-  color: #fff;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin: 0 0 4px 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+/* Filters Section */
+.filters-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+}
+
+.search-box {
+  flex: 1;
+  position: relative;
+  max-width: 400px;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #F8F9FA;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1976D2;
+  background: white;
+}
+
+.filter-select {
+  padding: 12px;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #F8F9FA;
+  min-width: 120px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #1976D2;
+  background: white;
+}
+
+/* Table Container */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.table-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #E0E0E0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #F8F9FA;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selected-count {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.table-actions-right {
+  display: flex;
+  gap: 8px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* Data Table */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 100%;
+}
+
+.data-table th {
+  background: #F8F9FA;
+  padding: 16px 24px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A1A1A;
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.data-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid #F0F0F0;
+  font-size: 14px;
+  color: #1A1A1A;
+}
+
+.data-table tr:hover {
+  background: #F8F9FA;
+}
+
+.checkbox-column {
+  width: 48px;
+}
+
+.actions-column {
+  width: 120px;
+}
+
+/* Checkbox Styles */
+.checkbox-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkmark {
+  height: 18px;
+  width: 18px;
+  background-color: white;
+  border: 2px solid #E0E0E0;
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.checkbox:checked ~ .checkmark {
+  background-color: #1976D2;
+  border-color: #1976D2;
+}
+
+.checkbox:checked ~ .checkmark:after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Quiz Content */
+.quiz-title {
+  font-weight: 500;
+  color: #1A1A1A;
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-active {
+  background: rgba(76, 175, 80, 0.1);
+  color: #388E3C;
+}
+
+.status-inactive {
+  background: rgba(158, 158, 158, 0.1);
+  color: #616161;
+}
+
+.status-completed {
+  background: rgba(33, 150, 243, 0.1);
+  color: #1976D2;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 16px;
   border: none;
   border-radius: 8px;
-  padding: 0.7em 1.7em;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-.btn-gradient-primary:hover {
-  background: linear-gradient(90deg, #2563eb 0%, #4299e1 100%);
-}
-.card {
-  border-radius: 1.5rem;
-}
-.table {
-  border-radius: 1rem;
-  overflow: hidden;
-}
-.table thead th {
-  vertical-align: middle;
-  font-size: 1.08em;
-}
-.table tbody td {
-  vertical-align: middle;
-}
-.sticky-top {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.badge {
-  font-size: 0.75rem;
-  padding: 0.375rem 0.5rem;
-  border-radius: 6px;
-  font-weight: 600;
-}
-
-.badge.bg-success {
-  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%) !important;
-}
-
-.badge.bg-warning {
-  background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%) !important;
-  color: white !important;
-}
-
-.badge.bg-danger {
-  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%) !important;
-}
-
-.badge.bg-secondary {
-  background: linear-gradient(135deg, #718096 0%, #4a5568 100%) !important;
-}
-
-.btn-outline-warning {
-  color: #ed8936;
-  border-color: #ed8936;
-}
-
-.btn-outline-warning:hover {
-  background-color: #ed8936;
-  border-color: #ed8936;
-  color: white;
-}
-
-.btn-outline-warning:focus {
-  box-shadow: 0 0 0 0.2rem rgba(237, 137, 54, 0.25);
-}
-
-.table-responsive {
-  border-radius: 1rem;
-  overflow: hidden;
-}
-
-.form-control-sm, .form-select-sm {
-  font-size: 0.875rem;
-  padding: 0.25rem 0.5rem;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
 }
 
 .btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: #1976D2;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1565C0;
+}
+
+.btn-secondary {
+  background: #F5F5F5;
+  color: #666;
+}
+
+.btn-secondary:hover {
+  background: #E0E0E0;
+}
+
+.btn-danger {
+  background: rgba(244, 67, 54, 0.1);
+  color: #D32F2F;
+}
+
+.btn-danger:hover {
+  background: rgba(244, 67, 54, 0.2);
+}
+
+.btn-info {
+  background: rgba(33, 150, 243, 0.1);
+  color: #1976D2;
+}
+
+.btn-info:hover {
+  background: rgba(33, 150, 243, 0.2);
+}
+
+.btn-warning {
+  background: rgba(255, 152, 0, 0.1);
+  color: #F57C00;
+}
+
+.btn-warning:hover {
+  background: rgba(255, 152, 0, 0.2);
+}
+
+.btn-icon {
+  padding: 8px;
+  min-width: 32px;
+  justify-content: center;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Pagination */
+.pagination {
+  padding: 20px 24px;
+  border-top: 1px solid #E0E0E0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #F8F9FA;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-numbers {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Loading and Empty States */
+.loading-state,
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: #666;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #E3F2FD;
+  border-left: 4px solid #1976D2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-icon {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Message Styles */
+.message {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+}
+
+.error-message {
+  background: rgba(244, 67, 54, 0.1);
+  color: #D32F2F;
+  border: 1px solid rgba(244, 67, 54, 0.2);
+}
+
+.success-message {
+  background: rgba(76, 175, 80, 0.1);
+  color: #388E3C;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.message-close {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  margin-left: auto;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.message-close:hover {
+  opacity: 1;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  padding: 24px 24px 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #F5F5F5;
+  color: #1A1A1A;
+}
+
+.modal-form {
+  padding: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A1A1A;
+  margin-bottom: 8px;
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #F8F9FA;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #1976D2;
+  background: white;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-box {
+    max-width: none;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .data-table {
+    font-size: 12px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 12px 16px;
+  }
+  
+  .modal-content {
+    margin: 16px;
+    max-width: none;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -4,6 +4,7 @@ from models import db, bcrypt, Subject, Quiz, Question, Score, User, Chapter
 from rbac import role_required
 import datetime
 
+# Define IST timezone
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
 routes = Blueprint('routes', __name__)
@@ -115,10 +116,37 @@ def home():
 @routes.route('/create_quizzes', methods=['POST'])
 @role_required('admin')
 def create_quiz():
+    # Define IST timezone within function scope
+    IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    
     data = request.json
+    print(f"Creating quiz with data: {data}")  # Debug log
+    
     try:
-        # Parse the datetime string and ensure it's in IST
-        start_datetime = datetime.datetime.strptime(data['start_datetime'], "%Y-%m-%d %H:%M").replace(tzinfo=IST)
+        # Handle both ISO format and standard format datetime strings
+        if 'start_datetime' in data and data['start_datetime']:
+            try:
+                # First try to parse as ISO format
+                if 'T' in data['start_datetime']:
+                    start_datetime = datetime.datetime.fromisoformat(data['start_datetime'].replace('Z', '+00:00'))
+                else:
+                    # Try standard format if ISO fails
+                    start_datetime = datetime.datetime.strptime(data['start_datetime'], "%Y-%m-%d %H:%M")
+                
+                # Ensure timezone awareness
+                if start_datetime.tzinfo is None:
+                    start_datetime = start_datetime.replace(tzinfo=IST)
+                else:
+                    # Convert to IST if it has a different timezone
+                    start_datetime = start_datetime.astimezone(IST)
+                    
+                print(f"Parsed start_datetime: {start_datetime}")  # Debug log
+                
+            except Exception as e:
+                print(f"Error parsing start_datetime: {data['start_datetime']}, error: {str(e)}")  # Debug log
+                return jsonify({"message": f"Invalid start_datetime format: {data['start_datetime']}. Use YYYY-MM-DDTHH:MM or YYYY-MM-DD HH:MM"}), 400
+        else:
+            return jsonify({"message": "start_datetime is required"}), 400
 
         quiz = Quiz(
             title=data['title'],
@@ -129,6 +157,9 @@ def create_quiz():
         )
         db.session.add(quiz)
         db.session.commit()
+        
+        print(f"Quiz created successfully with ID: {quiz.id}")  # Debug log
+        
         return jsonify({
             "message": "Quiz created",
             "quiz": {
@@ -141,15 +172,22 @@ def create_quiz():
                 "chapter_id": quiz.chapter_id
             }
         }), 201
-    except ValueError as e:
-        return jsonify({"message": "Invalid datetime format. Use YYYY-MM-DD HH:MM"}), 400
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating quiz: {str(e)}")  # Debug log
+        return jsonify({"message": f"Error creating quiz: {str(e)}"}), 500
 
 
 # Edit/Update Quizzes
 @routes.route('/update_quizzes/<int:quiz_id>', methods=['PUT'])
 @role_required('admin')
 def update_quiz(quiz_id):
+    # Define IST timezone within function scope
+    IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    
     data = request.json
+    print(f"Updating quiz {quiz_id} with data: {data}")  # Debug log
+    
     quiz = Quiz.query.get(quiz_id)
     if not quiz:
         return jsonify({"message": "Quiz not found"}), 404
@@ -164,22 +202,67 @@ def update_quiz(quiz_id):
         if 'start_datetime' in data and data['start_datetime']:
             # Handle ISO format datetime string from frontend
             try:
-                start_datetime = datetime.datetime.fromisoformat(data['start_datetime'].replace('Z', '+00:00')).replace(tzinfo=IST)
-            except ValueError:
-                # Try standard format if ISO fails
-                start_datetime = datetime.datetime.strptime(data['start_datetime'], "%Y-%m-%d %H:%M").replace(tzinfo=IST)
+                # First try to parse as ISO format
+                if 'T' in data['start_datetime']:
+                    start_datetime = datetime.datetime.fromisoformat(data['start_datetime'].replace('Z', '+00:00'))
+                else:
+                    # Try standard format if ISO fails
+                    start_datetime = datetime.datetime.strptime(data['start_datetime'], "%Y-%m-%d %H:%M")
+                
+                # Ensure timezone awareness
+                if start_datetime.tzinfo is None:
+                    start_datetime = start_datetime.replace(tzinfo=IST)
+                else:
+                    # Convert to IST if it has a different timezone
+                    start_datetime = start_datetime.astimezone(IST)
+                    
+                quiz.start_datetime = start_datetime
+                print(f"Parsed start_datetime: {start_datetime}")  # Debug log
+                
+            except Exception as e:
+                print(f"Error parsing start_datetime: {data['start_datetime']}, error: {str(e)}")  # Debug log
+                return jsonify({"message": f"Invalid start_datetime format: {data['start_datetime']}. Use YYYY-MM-DDTHH:MM or YYYY-MM-DD HH:MM"}), 400
             
-            # Ensure timezone awareness
-            if start_datetime.tzinfo is None:
-                start_datetime = start_datetime.replace(tzinfo=IST)
-            quiz.start_datetime = start_datetime
-            
+        if 'end_datetime' in data and data['end_datetime']:
+            # Handle end_datetime if provided
+            try:
+                # First try to parse as ISO format
+                if 'T' in data['end_datetime']:
+                    end_datetime = datetime.datetime.fromisoformat(data['end_datetime'].replace('Z', '+00:00'))
+                else:
+                    # Try standard format if ISO fails
+                    end_datetime = datetime.datetime.strptime(data['end_datetime'], "%Y-%m-%d %H:%M")
+                
+                # Ensure timezone awareness
+                if end_datetime.tzinfo is None:
+                    end_datetime = end_datetime.replace(tzinfo=IST)
+                else:
+                    # Convert to IST if it has a different timezone
+                    end_datetime = end_datetime.astimezone(IST)
+                    
+                print(f"Parsed end_datetime: {end_datetime}")  # Debug log
+                # Note: We can't directly set end_datetime as it's a property, but we can adjust duration
+                
+            except Exception as e:
+                print(f"Error parsing end_datetime: {data['end_datetime']}, error: {str(e)}")  # Debug log
+                return jsonify({"message": f"Invalid end_datetime format: {data['end_datetime']}. Use YYYY-MM-DDTHH:MM or YYYY-MM-DD HH:MM"}), 400
+        
         if 'duration_hours' in data:
             quiz.duration_hours = int(data['duration_hours'])
         if 'duration_minutes' in data:
             quiz.duration_minutes = int(data['duration_minutes'])
         
+        # Handle status field from frontend (convert to active/inactive logic)
+        if 'status' in data:
+            # The status field from frontend is just for display
+            # The actual active status is calculated based on datetime
+            # We don't need to do anything here as is_active is a computed property
+            print(f"Status field received: {data['status']}")  # Debug log
+            pass
+        
         db.session.commit()
+        print(f"Quiz {quiz_id} updated successfully")  # Debug log
+        
         return jsonify({
             "message": "Quiz updated successfully",
             "quiz": {
@@ -189,14 +272,17 @@ def update_quiz(quiz_id):
                 "end_datetime": quiz.end_datetime.isoformat() if quiz.end_datetime else None,
                 "duration_hours": quiz.duration_hours,
                 "duration_minutes": quiz.duration_minutes,
-                "chapter_id": quiz.chapter_id
+                "chapter_id": quiz.chapter_id,
+                "is_active": quiz.is_active
             }
         }), 200
     except (ValueError, TypeError) as e:
         db.session.rollback()
+        print(f"Error updating quiz {quiz_id}: {str(e)}")  # Debug log
         return jsonify({"message": f"Invalid data format: {str(e)}"}), 400
     except Exception as e:
         db.session.rollback()
+        print(f"Error updating quiz {quiz_id}: {str(e)}")  # Debug log
         return jsonify({"message": f"Error updating quiz: {str(e)}"}), 500
 
 # Toggle Quiz Status (Make Live/Inactive)
@@ -208,22 +294,21 @@ def toggle_quiz(quiz_id):
         return jsonify({"message": "Quiz not found"}), 404
     
     try:
-        # Toggle the is_active status
-        quiz.is_active = not quiz.is_active
-        
-        # If making active, set end_datetime if not already set
-        if quiz.is_active and not quiz.end_datetime and quiz.start_datetime:
-            # Set end_datetime to start_datetime + duration
-            total_minutes = (quiz.duration_hours * 60) + quiz.duration_minutes
-            quiz.end_datetime = quiz.start_datetime + datetime.timedelta(minutes=total_minutes)
+        # Toggle the manual_is_active status
+        quiz.manual_is_active = not quiz.manual_is_active
         
         db.session.commit()
         
+        # Get the new status after changes
+        new_status = quiz.is_active
+        
         return jsonify({
-            "message": f"Quiz {'activated' if quiz.is_active else 'deactivated'}",
-            "is_active": quiz.is_active
+            "message": f"Quiz {'activated' if new_status else 'deactivated'}",
+            "is_active": new_status
         }), 200
     except Exception as e:
+        db.session.rollback()
+        print(f"Error toggling quiz {quiz_id}: {str(e)}")  # Debug log
         return jsonify({"message": f"Error toggling quiz: {str(e)}"}), 500
 
 # Delete Quizzes
@@ -424,6 +509,9 @@ def view_scores():
 @routes.route('/available_quizzes', methods=['GET'])
 @role_required('user')
 def available_quizzes():
+    # Define IST timezone within function scope
+    IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    
     now = datetime.datetime.now(IST)
     quizzes = Quiz.query.all()
     
@@ -462,71 +550,170 @@ def available_quizzes():
     return jsonify(available_quizzes)
 
 # Get all subjects with their chapters and quizzes
-@routes.route('/api/subjects', methods=['GET'])
-@jwt_required()  # Add JWT requirement
+@routes.route('/api/subjects', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)  # Make JWT optional for CORS preflight
 def get_subjects():
-    subjects = Subject.query.all()
-    now = datetime.datetime.now(IST)
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        return response, 200
     
-    def get_quiz_status(quiz):
-        if not quiz.start_datetime:
-            return 'upcoming'
-        # Ensure timezone awareness
-        start_time = quiz.start_datetime.replace(tzinfo=IST)
-        end_time = quiz.end_datetime.replace(tzinfo=IST)
-        if now < start_time:
-            return 'upcoming'
-        elif now > end_time:
-            return 'expired'
-        return 'active'
+    try:
+        # Define IST timezone within function scope
+        IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+        
+        subjects = Subject.query.all()
+        now = datetime.datetime.now(IST)
+        
+        def get_quiz_status(quiz):
+            try:
+                if not quiz.start_datetime:
+                    return 'inactive'
+                
+                # Handle timezone-aware datetime objects
+                start_time = quiz.start_datetime
+                if start_time.tzinfo is None:
+                    start_time = start_time.replace(tzinfo=IST)
+                
+                end_time = quiz.end_datetime
+                if end_time and end_time.tzinfo is None:
+                    end_time = end_time.replace(tzinfo=IST)
+                
+                if not end_time:
+                    return 'inactive'
+                
+                if now < start_time:
+                    return 'upcoming'
+                elif now > end_time:
+                    return 'expired'
+                return 'active'
+            except Exception as e:
+                print(f"Error calculating quiz status for quiz {quiz.id}: {str(e)}")
+                return 'inactive'
 
-    return jsonify([{
-        'id': subject.id,
-        'name': subject.name,
-        'description': subject.description,
-        'chapters': [{
-            'id': chapter.id,
-            'name': chapter.name,
-            'description': chapter.description,
-            'quizzes': [{
-                'id': quiz.id,
-                'title': quiz.title,
-                'start_datetime': quiz.start_datetime.isoformat() if quiz.start_datetime else None,
-                'duration_hours': quiz.duration_hours,
-                'duration_minutes': quiz.duration_minutes,
-                'end_datetime': quiz.end_datetime.isoformat() if quiz.end_datetime else None,
-                'status': get_quiz_status(quiz),
-                'questions': [{
-                    'id': question.id,
-                    'question_text': question.question_text,
-                    'option1': question.option1,
-                    'option2': question.option2,
-                    'option3': question.option3,
-                    'option4': question.option4
-                } for question in quiz.questions]
-            } for quiz in chapter.quizzes]
-        } for chapter in subject.chapters]
-    } for subject in subjects])
+        subject_list = []
+        for subject in subjects:
+            try:
+                subject_data = {
+                    'id': subject.id,
+                    'name': subject.name,
+                    'description': subject.description,
+                    'chapters': []
+                }
+                
+                for chapter in subject.chapters:
+                    try:
+                        chapter_data = {
+                            'id': chapter.id,
+                            'name': chapter.name,
+                            'description': chapter.description,
+                            'quizzes': []
+                        }
+                        
+                        for quiz in chapter.quizzes:
+                            try:
+                                quiz_data = {
+                                    'id': quiz.id,
+                                    'title': quiz.title,
+                                    'start_datetime': quiz.start_datetime.isoformat() if quiz.start_datetime else None,
+                                    'duration_hours': quiz.duration_hours,
+                                    'duration_minutes': quiz.duration_minutes,
+                                    'end_datetime': quiz.end_datetime.isoformat() if quiz.end_datetime else None,
+                                    'status': get_quiz_status(quiz),
+                                    'questions': [{
+                                        'id': question.id,
+                                        'question_text': question.question_text,
+                                        'option1': question.option1,
+                                        'option2': question.option2,
+                                        'option3': question.option3,
+                                        'option4': question.option4
+                                    } for question in quiz.questions]
+                                }
+                                chapter_data['quizzes'].append(quiz_data)
+                            except Exception as e:
+                                print(f"Error processing quiz {quiz.id}: {str(e)}")
+                                continue
+                        
+                        subject_data['chapters'].append(chapter_data)
+                    except Exception as e:
+                        print(f"Error processing chapter {chapter.id}: {str(e)}")
+                        continue
+                
+                subject_list.append(subject_data)
+            except Exception as e:
+                print(f"Error processing subject {subject.id}: {str(e)}")
+                continue
+        
+        return jsonify(subject_list)
+    except Exception as e:
+        print(f"Error in get_subjects: {str(e)}")
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
+
+# Test endpoint to get quiz data without strict time checks
+@routes.route('/api/test-quiz/<int:quiz_id>', methods=['GET'])
+@role_required('user')
+def test_get_quiz(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    questions = Question.query.filter_by(quiz_id=quiz.id).all()
+    
+    return jsonify({
+        'id': quiz.id,
+        'title': quiz.title,
+        'start_datetime': quiz.start_datetime.isoformat() if quiz.start_datetime else None,
+        'end_datetime': quiz.end_datetime.isoformat() if quiz.end_datetime else None,
+        'duration_hours': quiz.duration_hours,
+        'duration_minutes': quiz.duration_minutes,
+        'questions': [{
+            'id': q.id,
+            'question_text': q.question_text,
+            'option1': q.option1,
+            'option2': q.option2,
+            'option3': q.option3,
+            'option4': q.option4,
+            'correct_option': q.correct_option
+        } for q in questions]
+    })
 
 # Get quiz details with questions
 @routes.route('/api/quizzes/<int:quiz_id>', methods=['GET'])
 @role_required('user')
 def get_quiz(quiz_id):
+    # Define IST timezone within function scope
+    IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    
     quiz = Quiz.query.get_or_404(quiz_id)
     now = datetime.datetime.now(IST)
     
+    print(f"DEBUG: get_quiz called for quiz_id: {quiz_id}")
+    print(f"DEBUG: Quiz title: {quiz.title}")
+    print(f"DEBUG: Current time (IST): {now}")
+    print(f"DEBUG: Quiz start_datetime: {quiz.start_datetime}")
+    print(f"DEBUG: Quiz end_datetime: {quiz.end_datetime}")
+    
     # Check if quiz is active
     if not quiz.start_datetime or not quiz.end_datetime:
+        print(f"DEBUG: Quiz {quiz_id} has no start_datetime or end_datetime")
         return jsonify({"message": "Quiz is not available"}), 403
     
     start_time = quiz.start_datetime.replace(tzinfo=IST) if quiz.start_datetime.tzinfo is None else quiz.start_datetime
     end_time = quiz.end_datetime.replace(tzinfo=IST) if quiz.end_datetime.tzinfo is None else quiz.end_datetime
     
+    print(f"DEBUG: Start time (IST): {start_time}")
+    print(f"DEBUG: End time (IST): {end_time}")
+    print(f"DEBUG: Is current time between start and end? {start_time <= now <= end_time}")
+    
     # Only allow access if quiz is currently active
     if not (start_time <= now <= end_time):
+        print(f"DEBUG: Quiz {quiz_id} is not currently active")
         return jsonify({"message": "Quiz is not currently active"}), 403
     
+    print(f"DEBUG: Quiz {quiz_id} is active, fetching questions")
     questions = Question.query.filter_by(quiz_id=quiz.id).all()
+    print(f"DEBUG: Found {len(questions)} questions for quiz {quiz_id}")
+    
     return jsonify({
         'id': quiz.id,
         'title': quiz.title,
@@ -647,30 +834,62 @@ def get_quizzes():
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
         return response, 200
     
-    quizzes = Quiz.query.all()
-    now = datetime.datetime.now(IST)
-    
-    def get_quiz_status(quiz):
-        if not quiz.start_datetime or not quiz.end_datetime:
-            return 'inactive'
-        start_time = quiz.start_datetime.replace(tzinfo=IST) if quiz.start_datetime.tzinfo is None else quiz.start_datetime
-        end_time = quiz.end_datetime.replace(tzinfo=IST) if quiz.end_datetime.tzinfo is None else quiz.end_datetime
-        if now < start_time:
-            return 'upcoming'
-        elif now > end_time:
-            return 'expired'
-        return 'active'
-    
-    return jsonify([{
-        'id': quiz.id,
-        'title': quiz.title,
-        'chapter_id': quiz.chapter_id,
-        'start_datetime': quiz.start_datetime.isoformat() if quiz.start_datetime else None,
-        'end_datetime': quiz.end_datetime.isoformat() if quiz.end_datetime else None,
-        'duration_hours': quiz.duration_hours,
-        'duration_minutes': quiz.duration_minutes,
-        'status': get_quiz_status(quiz)
-    } for quiz in quizzes])
+    try:
+        # Define IST timezone within function scope
+        IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+        
+        quizzes = Quiz.query.all()
+        now = datetime.datetime.now(IST)
+        
+        def get_quiz_status(quiz):
+            try:
+                if not quiz.start_datetime:
+                    return 'inactive'
+                
+                # Handle timezone-aware datetime objects
+                start_time = quiz.start_datetime
+                if start_time.tzinfo is None:
+                    start_time = start_time.replace(tzinfo=IST)
+                
+                end_time = quiz.end_datetime
+                if end_time and end_time.tzinfo is None:
+                    end_time = end_time.replace(tzinfo=IST)
+                
+                if not end_time:
+                    return 'inactive'
+                
+                if now < start_time:
+                    return 'upcoming'
+                elif now > end_time:
+                    return 'expired'
+                return 'active'
+            except Exception as e:
+                print(f"Error calculating quiz status for quiz {quiz.id}: {str(e)}")
+                return 'inactive'
+        
+        quiz_list = []
+        for quiz in quizzes:
+            try:
+                quiz_data = {
+                    'id': quiz.id,
+                    'title': quiz.title,
+                    'chapter_id': quiz.chapter_id,
+                    'start_datetime': quiz.start_datetime.isoformat() if quiz.start_datetime else None,
+                    'end_datetime': quiz.end_datetime.isoformat() if quiz.end_datetime else None,
+                    'duration_hours': quiz.duration_hours,
+                    'duration_minutes': quiz.duration_minutes,
+                    'status': get_quiz_status(quiz)
+                }
+                quiz_list.append(quiz_data)
+            except Exception as e:
+                print(f"Error processing quiz {quiz.id}: {str(e)}")
+                # Skip problematic quizzes instead of failing completely
+                continue
+        
+        return jsonify(quiz_list)
+    except Exception as e:
+        print(f"Error in get_quizzes: {str(e)}")
+        return jsonify({"error": "Internal server error", "message": str(e)}), 500
 
 # Get all questions (for admin)
 @routes.route('/api/questions', methods=['GET'])
@@ -695,6 +914,9 @@ def get_questions():
 @routes.route('/debug/quizzes', methods=['GET'])
 @role_required('admin')
 def debug_quizzes():
+    # Define IST timezone within function scope
+    IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    
     now = datetime.datetime.now(IST)
     quizzes = Quiz.query.all()
     

@@ -63,6 +63,7 @@ class Quiz(db.Model):
     start_datetime = db.Column(db.DateTime, nullable=False)  # Quiz start date and time
     duration_hours = db.Column(db.Integer, default=0)  # Hours part of duration
     duration_minutes = db.Column(db.Integer, default=30)  # Minutes part of duration
+    manual_is_active = db.Column(db.Boolean, default=True)  # Manual activation/deactivation
     scores = db.relationship('Score', backref='quiz', lazy=True)
     questions = db.relationship('Question', backref='quiz', lazy=True)
 
@@ -73,10 +74,16 @@ class Quiz(db.Model):
             return None
         return self.start_datetime + dt.timedelta(hours=self.duration_hours, minutes=self.duration_minutes)
 
-    IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
     @property
     def is_active(self):
-        """Check if quiz is currently active based on start time and duration"""
+        """Check if quiz is currently active based on manual status and time"""
+        IST = dt.timezone(dt.timedelta(hours=5, minutes=30))
+        
+        # First check manual activation status
+        if not self.manual_is_active:
+            return False
+            
+        # Then check time-based activation
         now = dt.datetime.now(IST)
         end_time = self.end_datetime
         if not self.start_datetime or not end_time:

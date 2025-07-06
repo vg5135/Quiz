@@ -1,5 +1,5 @@
 // Centralized API utility for admin dashboard
-const API_BASE = "http://127.0.0.1:5006";
+const API_BASE = "http://localhost:5006";
 
 function getToken() {
   return localStorage.getItem("token");

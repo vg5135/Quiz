@@ -1,151 +1,135 @@
 <template>
-  <div class="admin-dashboard">
-    <!-- Header -->
-    <div class="dashboard-header">
-      <div class="header-content">
-        <div class="logo-section">
-          <div class="logo-icon">👨‍💼</div>
-          <h1 class="logo-text">Admin Dashboard</h1>
+  <AdminLayout>
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 4C16 5.10457 15.1046 6 14 6C12.8954 6 12 5.10457 12 4C12 2.89543 12.8954 2 14 2C15.1046 2 16 2.89543 16 4ZM21 10V9C21 7.89543 20.1046 7 19 7C18.6357 7 18.2942 7.09739 17.9999 7.26722C17.9999 7.08908 18 6.91077 18 6.73242C18 4.6863 16.2091 3 14 3C12.3438 3 10.8438 3.78778 10 5.02113C9.15625 3.78778 7.65625 3 6 3C3.79086 3 2 4.6863 2 6.73242C2 6.91077 2.00008 7.08908 2.00008 7.26722C1.70581 7.09739 1.36426 7 1 7C-0.104569 7 -1 7.89543 -1 9V10C-1 11.1046 -0.104569 12 1 12H21C22.1046 12 23 11.1046 23 10ZM8 17C8 15.8954 7.10457 15 6 15C4.89543 15 4 15.8954 4 17C4 18.1046 4.89543 19 6 19C7.10457 19 8 18.1046 8 17ZM22 17C22 15.8954 21.1046 15 20 15C18.8954 15 18 15.8954 18 17C18 18.1046 18.8954 19 20 19C21.1046 19 22 18.1046 22 17ZM13 15C13 13.8954 12.1046 13 11 13C9.89543 13 9 13.8954 9 15C9 16.1046 9.89543 17 11 17C12.1046 17 13 16.1046 13 15Z" fill="currentColor"/>
+          </svg>
         </div>
-        <div class="user-section">
-          <div class="user-info">
-            <div class="user-name">{{ user?.full_name || 'Admin' }}</div>
-            <div class="user-role">Administrator</div>
-          </div>
-          <button @click="logout" class="logout-btn">
-            <span>🚪</span> Logout
-          </button>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.totalUsers }}</div>
+          <div class="stat-label">Total Users</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 5V7H15V5H9M3 5V7H7V5H3M9 9V11H15V9H9M3 9V11H7V9H3M9 13V15H15V13H9M3 13V15H7V13H3M9 17V19H15V17H9M3 17V19H7V17H3M19 5V19H21V5H19Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.totalQuizzes }}</div>
+          <div class="stat-label">Total Quizzes</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.totalSubjects }}</div>
+          <div class="stat-label">Total Subjects</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 3H5C3.89 3 3 3.89 3 5V19A2 2 0 0 0 5 21H19A2 2 0 0 0 21 19V5C21 3.89 20.1 3 19 3M19 5V19H5V5H19Z" fill="currentColor"/>
+            <path d="M7 7H17V9H7V7M7 11H17V13H7V11M7 15H14V17H7V15Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.totalChapters }}</div>
+          <div class="stat-label">Total Chapters</div>
         </div>
       </div>
     </div>
 
-    <!-- Main Content with Sidebar -->
-    <div class="dashboard-content">
-      <!-- Fixed Sidebar -->
-      <aside class="admin-sidebar">
-        <nav class="sidebar-nav">
-          <button 
-            @click="navigateTo('/admin')" 
-            class="nav-item"
-            :class="{ active: $route.path === '/admin' }"
-          >
-            <span>📊</span>
-            Dashboard
-          </button>
-          <button 
-            @click="navigateTo('/admin/users')" 
-            class="nav-item"
-            :class="{ active: $route.path === '/admin/users' }"
-          >
-            <span>👥</span>
-            User Management
-          </button>
-          <button 
-            @click="navigateTo('/admin/subjects')" 
-            class="nav-item"
-            :class="{ active: $route.path === '/admin/subjects' }"
-          >
-            <span>📚</span>
-            Subject Management
-          </button>
-          <button 
-            @click="navigateTo('/admin/chapters')" 
-            class="nav-item"
-            :class="{ active: $route.path === '/admin/chapters' }"
-          >
-            <span>📖</span>
-            Chapter Management
-          </button>
-          <button 
-            @click="navigateTo('/admin/quizzes')" 
-            class="nav-item"
-            :class="{ active: $route.path === '/admin/quizzes' }"
-          >
-            <span>📝</span>
-            Quiz Management
-          </button>
-          <button 
-            @click="navigateTo('/admin/questions')" 
-            class="nav-item"
-            :class="{ active: $route.path === '/admin/questions' }"
-          >
-            <span>❓</span>
-            Question Management
-          </button>
-        </nav>
-      </aside>
-
-      <!-- Main Content Area -->
-      <main class="admin-main">
-        <!-- Stats Overview -->
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-icon">👥</div>
-            <div class="stat-value">{{ stats.totalUsers }}</div>
-            <div class="stat-label">Total Users</div>
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="actions-grid">
+        <div class="action-card" @click="navigateTo('/admin/users')">
+          <div class="action-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 4C16 5.10457 15.1046 6 14 6C12.8954 6 12 5.10457 12 4C12 2.89543 12.8954 2 14 2C15.1046 2 16 2.89543 16 4ZM21 10V9C21 7.89543 20.1046 7 19 7C18.6357 7 18.2942 7.09739 17.9999 7.26722C17.9999 7.08908 18 6.91077 18 6.73242C18 4.6863 16.2091 3 14 3C12.3438 3 10.8438 3.78778 10 5.02113C9.15625 3.78778 7.65625 3 6 3C3.79086 3 2 4.6863 2 6.73242C2 6.91077 2.00008 7.08908 2.00008 7.26722C1.70581 7.09739 1.36426 7 1 7C-0.104569 7 -1 7.89543 -1 9V10C-1 11.1046 -0.104569 12 1 12H21C22.1046 12 23 11.1046 23 10ZM8 17C8 15.8954 7.10457 15 6 15C4.89543 15 4 15.8954 4 17C4 18.1046 4.89543 19 6 19C7.10457 19 8 18.1046 8 17ZM22 17C22 15.8954 21.1046 15 20 15C18.8954 15 18 15.8954 18 17C18 18.1046 18.8954 19 20 19C21.1046 19 22 18.1046 22 17ZM13 15C13 13.8954 12.1046 13 11 13C9.89543 13 9 13.8954 9 15C9 16.1046 9.89543 17 11 17C12.1046 17 13 16.1046 13 15Z" fill="currentColor"/>
+            </svg>
           </div>
-          <div class="stat-card">
-            <div class="stat-icon">📝</div>
-            <div class="stat-value">{{ stats.totalQuizzes }}</div>
-            <div class="stat-label">Total Quizzes</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">📚</div>
-            <div class="stat-value">{{ stats.totalSubjects }}</div>
-            <div class="stat-label">Total Subjects</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">📖</div>
-            <div class="stat-value">{{ stats.totalChapters }}</div>
-            <div class="stat-label">Total Chapters</div>
-          </div>
-        </div>
-
-        <!-- Navigation Cards -->
-        <div class="nav-cards">
-          <div class="nav-card" @click="navigateTo('/admin/users')">
-            <div class="nav-icon">👥</div>
+          <div class="action-content">
             <h3>User Management</h3>
             <p>Manage users, view details, and control access</p>
           </div>
-          <div class="nav-card" @click="navigateTo('/admin/quizzes')">
-            <div class="nav-icon">📝</div>
+        </div>
+        
+        <div class="action-card" @click="navigateTo('/admin/quizzes')">
+          <div class="action-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 5V7H15V5H9M3 5V7H7V5H3M9 9V11H15V9H9M3 9V11H7V9H3M9 13V15H15V13H9M3 13V15H7V13H3M9 17V19H15V17H9M3 17V19H7V17H3M19 5V19H21V5H19Z" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="action-content">
             <h3>Quiz Management</h3>
             <p>Create, edit, and manage quizzes</p>
           </div>
-          <div class="nav-card" @click="navigateTo('/admin/subjects')">
-            <div class="nav-icon">📚</div>
+        </div>
+        
+        <div class="action-card" @click="navigateTo('/admin/subjects')">
+          <div class="action-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="action-content">
             <h3>Subject Management</h3>
             <p>Manage subjects and chapters</p>
           </div>
-          <div class="nav-card" @click="navigateTo('/admin/questions')">
-            <div class="nav-icon">❓</div>
+        </div>
+        
+        <div class="action-card" @click="navigateTo('/admin/questions')">
+          <div class="action-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M11 18H13V16H11V18ZM12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20ZM12 6C9.79 6 8 7.79 8 10H10C10 8.9 10.9 8 12 8S14 8.9 14 10C14 12 11 11.75 11 15H13C13 12.75 16 12.5 16 10C16 7.79 14.21 6 12 6Z" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="action-content">
             <h3>Question Management</h3>
             <p>Create and manage quiz questions</p>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Recent Activity -->
-        <div class="recent-activity">
-          <h2>Recent Activity</h2>
-          <div class="activity-list">
-            <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
-              <div class="activity-icon">{{ activity.icon }}</div>
-              <div class="activity-content">
-                <div class="activity-text">{{ activity.text }}</div>
-                <div class="activity-time">{{ formatTime(activity.time) }}</div>
-              </div>
-            </div>
+    <!-- Recent Activity -->
+    <div class="recent-activity">
+      <h2 class="section-title">Recent Activity</h2>
+      <div class="activity-list">
+        <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
+          <div class="activity-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20ZM12.5 7V12.25L17 14.92L16.25 16.15L11 13V7H12.5Z" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="activity-content">
+            <div class="activity-text">{{ activity.text }}</div>
+            <div class="activity-time">{{ formatTime(activity.time) }}</div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
-  </div>
+  </AdminLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import AdminLayout from './AdminLayout.vue';
 import { listUsers, getQuizzes, getSubjects, getChapters } from '../../api';
 
 const router = useRouter();
@@ -161,28 +145,25 @@ const stats = ref({
 const recentActivities = ref([
   {
     id: 1,
-    icon: '👤',
     text: 'New user registered: John Doe',
     time: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
   },
   {
     id: 2,
-    icon: '📝',
     text: 'Quiz "Mathematics Basics" created',
     time: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
   },
   {
     id: 3,
-    icon: '📚',
     text: 'New subject "Physics" added',
     time: new Date(Date.now() - 1000 * 60 * 60 * 4) // 4 hours ago
+  },
+  {
+    id: 4,
+    text: 'Chapter "Mechanics" updated',
+    time: new Date(Date.now() - 1000 * 60 * 60 * 6) // 6 hours ago
   }
 ]);
-
-// User data (you might want to get this from your auth store)
-const user = ref({
-  full_name: 'Admin User'
-});
 
 // Methods
 const fetchStats = async () => {
@@ -209,12 +190,6 @@ const navigateTo = (path) => {
   router.push(path);
 };
 
-const logout = () => {
-  // Implement logout logic
-  localStorage.removeItem('token');
-  router.push('/login');
-};
-
 const formatTime = (time) => {
   const now = new Date();
   const diff = now - time;
@@ -233,290 +208,171 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-dashboard {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  padding: 1rem 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
   width: 100%;
-  margin: 0 auto;
 }
 
-.logo-section {
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 16px;
+  transition: all 0.2s ease;
 }
 
-.logo-icon {
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-  color: white;
-  padding: 0.5rem;
+.stat-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  background: #E3F2FD;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  color: #1976D2;
+  flex-shrink: 0;
 }
 
-.logo-text {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 0;
-}
-
-.user-section {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.user-name {
-  font-weight: 600;
-  color: #2d3748;
-  font-size: 0.95rem;
-}
-
-.user-role {
-  font-size: 0.8rem;
-  color: #718096;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: #e53e3e;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.logout-btn:hover {
-  background: #c53030;
-  transform: translateY(-1px);
-}
-
-.dashboard-content {
+.stat-content {
   flex: 1;
-  display: flex;
-}
-
-.admin-sidebar {
-  width: 250px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  position: fixed;
-  height: calc(100vh - 80px);
-  overflow-y: auto;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  border: none;
-  background: transparent;
-  color: #4a5568;
-  font-size: 0.95rem;
-  font-weight: 500;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  width: 100%;
-}
-
-.nav-item:hover {
-  background: rgba(66, 153, 225, 0.1);
-  color: #3182ce;
-  transform: translateX(4px);
-}
-
-.nav-item.active {
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
-}
-
-.admin-main {
-  flex: 1;
-  padding: 2rem;
-  margin-left: 250px;
-  width: calc(100vw - 250px);
-  max-width: none;
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 3rem;
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  text-align: center;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-}
-
-.stat-icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
 }
 
 .stat-value {
-  font-size: 2rem;
+  font-size: 32px;
   font-weight: 700;
-  color: #2d3748;
-  margin-bottom: 0.25rem;
+  color: #1A1A1A;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 0.9rem;
-  color: #718096;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
 }
 
-.nav-cards {
+/* Quick Actions */
+.quick-actions {
+  margin-bottom: 40px;
+  width: 100%;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 24px;
+}
+
+.actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  width: 100%;
 }
 
-.nav-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+.action-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
   cursor: pointer;
-  text-align: center;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.nav-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
-  background: rgba(66, 153, 225, 0.05);
+.action-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  border-color: #1976D2;
 }
 
-.nav-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+.action-icon {
+  width: 56px;
+  height: 56px;
+  background: #E3F2FD;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976D2;
+  flex-shrink: 0;
 }
 
-.nav-card h3 {
-  color: #2d3748;
-  margin-bottom: 0.5rem;
+.action-content {
+  flex: 1;
+}
+
+.action-content h3 {
+  font-size: 16px;
   font-weight: 600;
+  color: #1A1A1A;
+  margin: 0 0 4px 0;
 }
 
-.nav-card p {
-  color: #718096;
+.action-content p {
+  font-size: 14px;
+  color: #666;
   margin: 0;
-  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
+/* Recent Activity */
 .recent-activity {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.recent-activity h2 {
-  color: #2d3748;
-  margin-bottom: 1.5rem;
-  font-weight: 600;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
+  width: 100%;
 }
 
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 16px;
 }
 
 .activity-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  gap: 16px;
+  padding: 16px;
+  background: #F8F9FA;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 .activity-item:hover {
-  background: rgba(255, 255, 255, 0.8);
-  transform: translateX(5px);
+  background: #E3F2FD;
 }
 
 .activity-icon {
-  font-size: 1.5rem;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
+  background: #E3F2FD;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(66, 153, 225, 0.1);
-  border-radius: 8px;
+  color: #1976D2;
+  flex-shrink: 0;
 }
 
 .activity-content {
@@ -524,64 +380,41 @@ onMounted(() => {
 }
 
 .activity-text {
-  color: #2d3748;
+  font-size: 14px;
   font-weight: 500;
-  margin-bottom: 0.25rem;
+  color: #1A1A1A;
+  margin-bottom: 2px;
 }
 
 .activity-time {
-  color: #718096;
-  font-size: 0.8rem;
+  font-size: 12px;
+  color: #666;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .dashboard-header {
-    padding: 1rem;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
-  }
-  
-  .dashboard-content {
-    flex-direction: column;
-  }
-  
-  .admin-sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-    margin-left: 0;
-  }
-  
-  .admin-main {
-    margin-left: 0;
-    width: 100vw;
-    max-width: 100vw;
-    padding: 1rem;
-  }
-  
-  .stats-row {
+  .stats-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
   
-  .nav-cards {
+  .actions-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
   
-  .sidebar-nav {
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0.5rem;
+  .stat-card,
+  .action-card {
+    padding: 20px;
   }
   
-  .nav-item {
-    white-space: nowrap;
-    min-width: 120px;
-    flex-shrink: 0;
+  .stat-value {
+    font-size: 28px;
+  }
+  
+  .action-icon {
+    width: 48px;
+    height: 48px;
   }
 }
 </style> 

@@ -9,7 +9,10 @@
         </div>
         <div class="header-right">
           <button @click="showCreateModal = true" class="btn btn-primary">
-            <span>➕</span> Add New User
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
+            </svg>
+            Add New User
           </button>
         </div>
       </div>
@@ -18,13 +21,15 @@
     <!-- Search and Filters -->
     <div class="filters-section">
       <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z" fill="currentColor"/>
+        </svg>
         <input
           v-model="searchQuery"
           type="text"
           placeholder="Search users by name or email..."
           class="search-input"
         />
-        <span class="search-icon">🔍</span>
       </div>
       <div class="filter-options">
         <select v-model="roleFilter" class="filter-select">
@@ -38,64 +43,104 @@
     <!-- Users Table -->
     <div class="table-container">
       <div class="table-header">
-        <h3>All Users ({{ filteredUsers.length }})</h3>
-        <button @click="refreshUsers" class="btn btn-secondary btn-sm">
-          <span>🔄</span> Refresh
-        </button>
+        <div class="table-actions">
+          <label class="checkbox-wrapper">
+            <input 
+              type="checkbox" 
+              :checked="allSelected" 
+              @change="toggleSelectAll"
+              class="checkbox"
+            />
+            <span class="checkmark"></span>
+          </label>
+          <span class="selected-count" v-if="selectedUsers.length > 0">
+            {{ selectedUsers.length }} selected
+          </span>
+        </div>
+        <div class="table-actions-right">
+          <button 
+            v-if="selectedUsers.length > 0"
+            @click="deleteSelected" 
+            class="btn btn-danger btn-sm"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="currentColor"/>
+            </svg>
+            Delete Selected
+          </button>
+        </div>
       </div>
-      
-      <div v-if="loading" class="loading-state">
-        <div class="loading-spinner"></div>
-        <p>Loading users...</p>
-      </div>
-      
-      <div v-else-if="filteredUsers.length === 0" class="empty-state">
-        <div class="empty-icon">👥</div>
-        <h3>No Users Found</h3>
-        <p>{{ searchQuery || roleFilter ? 'Try adjusting your search or filters.' : 'No users have been created yet.' }}</p>
-      </div>
-      
-      <div v-else class="users-table">
-        <table class="table">
+
+      <div class="table-wrapper">
+        <table class="data-table">
           <thead>
             <tr>
+              <th class="checkbox-column">
+                <label class="checkbox-wrapper">
+                  <input 
+                    type="checkbox" 
+                    :checked="allSelected" 
+                    @change="toggleSelectAll"
+                    class="checkbox"
+                  />
+                  <span class="checkmark"></span>
+                </label>
+              </th>
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
-              <th>Qualification</th>
-              <th>Date of Birth</th>
-              <th>Actions</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th class="actions-column">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in paginatedUsers" :key="user.id" class="user-row">
+            <tr v-for="user in filteredUsers" :key="user.id" class="table-row">
+              <td class="checkbox-column">
+                <label class="checkbox-wrapper">
+                  <input 
+                    type="checkbox" 
+                    :value="user.id"
+                    v-model="selectedUsers"
+                    class="checkbox"
+                  />
+                  <span class="checkmark"></span>
+                </label>
+              </td>
               <td>
                 <div class="user-info">
-                  <div class="user-avatar">{{ getUserInitials(user.full_name) }}</div>
+                  <div class="user-avatar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+                    </svg>
+                  </div>
                   <div class="user-details">
-                    <div class="user-name">{{ user.full_name || 'N/A' }}</div>
-                    <div class="user-id">ID: {{ user.id }}</div>
+                    <div class="user-name">{{ user.full_name || user.username }}</div>
+                    <div class="user-username">@{{ user.username }}</div>
                   </div>
                 </div>
               </td>
               <td>{{ user.email }}</td>
               <td>
-                <span class="role-badge" :class="getRoleBadgeClass(user.role)">
+                <span class="role-badge" :class="`role-${user.role}`">
                   {{ user.role }}
                 </span>
               </td>
-              <td>{{ user.qualification || 'N/A' }}</td>
-              <td>{{ formatDate(user.date_of_birth) }}</td>
               <td>
+                <span class="status-badge status-active">Active</span>
+              </td>
+              <td>{{ formatDate(user.created_at) }}</td>
+              <td class="actions-column">
                 <div class="action-buttons">
-                  <button @click="viewUser(user)" class="btn btn-sm btn-info" title="View Details">
-                    👁️
+                  <button @click="editUser(user)" class="btn btn-icon btn-info" title="Edit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z" fill="currentColor"/>
+                    </svg>
                   </button>
-                  <button @click="editUser(user)" class="btn btn-sm btn-warning" title="Edit User">
-                    ✏️
-                  </button>
-                  <button @click="deleteUser(user.id)" class="btn btn-sm btn-danger" title="Delete User">
-                    🗑️
+                  <button @click="deleteUser(user.id)" class="btn btn-icon btn-danger" title="Delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM8 9H16V19H8V9ZM15.5 4L14.5 3H9.5L8.5 4H5V6H19V4H15.5Z" fill="currentColor"/>
+                    </svg>
                   </button>
                 </div>
               </td>
@@ -105,158 +150,93 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="filteredUsers.length > itemsPerPage" class="pagination">
-        <button 
-          @click="currentPage--" 
-          :disabled="currentPage === 1"
-          class="btn btn-secondary btn-sm"
-        >
-          ← Previous
-        </button>
-        <span class="page-info">
-          Page {{ currentPage }} of {{ totalPages }}
-        </span>
-        <button 
-          @click="currentPage++" 
-          :disabled="currentPage === totalPages"
-          class="btn btn-secondary btn-sm"
-        >
-          Next →
-        </button>
+      <div class="pagination">
+        <div class="page-info">
+          Showing {{ startIndex + 1 }} to {{ endIndex }} of {{ filteredUsers.length }} users
+        </div>
+        <div class="pagination-controls">
+          <button 
+            @click="previousPage" 
+            :disabled="currentPage === 1"
+            class="btn btn-secondary btn-sm"
+          >
+            Previous
+          </button>
+          <span class="page-numbers">
+            Page {{ currentPage }} of {{ totalPages }}
+          </span>
+          <button 
+            @click="nextPage" 
+            :disabled="currentPage === totalPages"
+            class="btn btn-secondary btn-sm"
+          >
+            Next
+          </button>
+        </div>
       </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading users...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="filteredUsers.length === 0" class="empty-state">
+      <div class="empty-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12S6.48 22 12 22 22 17.52 22 12 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12S7.59 4 12 4 20 7.59 20 12 16.41 20 12 20ZM12 6C9.79 6 8 7.79 8 10H10C10 8.9 10.9 8 12 8S14 8.9 14 10C14 12 11 11.75 11 15H13C13 12.75 16 12.5 16 10C16 7.79 14.21 6 12 6Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <h3>No users found</h3>
+      <p>Try adjusting your search or filter criteria</p>
     </div>
 
     <!-- Create User Modal -->
     <div v-if="showCreateModal" class="modal-overlay" @click="showCreateModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Create New User</h3>
-          <button @click="showCreateModal = false" class="modal-close">✕</button>
+          <h2>Create New User</h2>
+          <button @click="showCreateModal = false" class="modal-close">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
-        <form @submit.prevent="createUser" class="modal-body">
+        <form @submit.prevent="createUser" class="modal-form">
           <div class="form-group">
-            <label>Full Name *</label>
-            <input v-model="newUser.full_name" type="text" required class="form-control" />
+            <label>Full Name</label>
+            <input v-model="newUser.full_name" type="text" required class="form-input" />
           </div>
           <div class="form-group">
-            <label>Email *</label>
-            <input v-model="newUser.email" type="email" required class="form-control" />
+            <label>Username</label>
+            <input v-model="newUser.username" type="text" required class="form-input" />
           </div>
           <div class="form-group">
-            <label>Password *</label>
-            <input v-model="newUser.password" type="password" required class="form-control" />
+            <label>Email</label>
+            <input v-model="newUser.email" type="email" required class="form-input" />
           </div>
           <div class="form-group">
-            <label>Role *</label>
-            <select v-model="newUser.role" required class="form-control">
+            <label>Password</label>
+            <input v-model="newUser.password" type="password" required class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select v-model="newUser.role" required class="form-select">
               <option value="user">User</option>
               <option value="admin">Admin</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label>Qualification</label>
-            <input v-model="newUser.qualification" type="text" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>Date of Birth</label>
-            <input v-model="newUser.date_of_birth" type="date" class="form-control" />
           </div>
           <div class="modal-actions">
             <button type="button" @click="showCreateModal = false" class="btn btn-secondary">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary" :disabled="creating">
-              {{ creating ? 'Creating...' : 'Create User' }}
+            <button type="submit" class="btn btn-primary">
+              Create User
             </button>
           </div>
         </form>
-      </div>
-    </div>
-
-    <!-- Edit User Modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click="showEditModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Edit User</h3>
-          <button @click="showEditModal = false" class="modal-close">✕</button>
-        </div>
-        <form @submit.prevent="updateUser" class="modal-body">
-          <div class="form-group">
-            <label>Full Name *</label>
-            <input v-model="editingUser.full_name" type="text" required class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>Email *</label>
-            <input v-model="editingUser.email" type="email" required class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>New Password (leave blank to keep current)</label>
-            <input v-model="editingUser.password" type="password" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>Role *</label>
-            <select v-model="editingUser.role" required class="form-control">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Qualification</label>
-            <input v-model="editingUser.qualification" type="text" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>Date of Birth</label>
-            <input v-model="editingUser.date_of_birth" type="date" class="form-control" />
-          </div>
-          <div class="modal-actions">
-            <button type="button" @click="showEditModal = false" class="btn btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="updating">
-              {{ updating ? 'Updating...' : 'Update User' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- View User Modal -->
-    <div v-if="showViewModal" class="modal-overlay" @click="showViewModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>User Details</h3>
-          <button @click="showViewModal = false" class="modal-close">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="user-profile">
-            <div class="profile-avatar">{{ getUserInitials(viewingUser.full_name) }}</div>
-            <div class="profile-info">
-              <h4>{{ viewingUser.full_name || 'N/A' }}</h4>
-              <p class="user-email">{{ viewingUser.email }}</p>
-              <span class="role-badge" :class="getRoleBadgeClass(viewingUser.role)">
-                {{ viewingUser.role }}
-              </span>
-            </div>
-          </div>
-          <div class="user-details-grid">
-            <div class="detail-item">
-              <label>User ID</label>
-              <span>{{ viewingUser.id }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Qualification</label>
-              <span>{{ viewingUser.qualification || 'Not specified' }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Date of Birth</label>
-              <span>{{ formatDate(viewingUser.date_of_birth) || 'Not specified' }}</span>
-            </div>
-            <div class="detail-item">
-              <label>Account Created</label>
-              <span>{{ formatDate(viewingUser.created_at) || 'Unknown' }}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </AdminLayout>
@@ -269,27 +249,27 @@ import AdminLayout from './AdminLayout.vue';
 
 // Reactive data
 const users = ref([]);
-const loading = ref(false);
+const loading = ref(true);
 const creating = ref(false);
 const updating = ref(false);
 const searchQuery = ref('');
 const roleFilter = ref('');
+const selectedUsers = ref([]);
+const showCreateModal = ref(false);
 const currentPage = ref(1);
-const itemsPerPage = ref(10);
+const itemsPerPage = 10;
 
 // Modal states
-const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showViewModal = ref(false);
 
 // Form data
 const newUser = ref({
   full_name: '',
+  username: '',
   email: '',
   password: '',
-  role: 'user',
-  qualification: '',
-  date_of_birth: ''
+  role: 'user'
 });
 
 const editingUser = ref({});
@@ -303,7 +283,8 @@ const filteredUsers = computed(() => {
     const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(user => 
       user.full_name?.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query)
+      user.username?.toLowerCase().includes(query) ||
+      user.email?.toLowerCase().includes(query)
     );
   }
   
@@ -314,19 +295,26 @@ const filteredUsers = computed(() => {
   return filtered;
 });
 
-const totalPages = computed(() => Math.ceil(filteredUsers.value.length / itemsPerPage.value));
-
 const paginatedUsers = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  const end = start + itemsPerPage.value;
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
   return filteredUsers.value.slice(start, end);
+});
+
+const totalPages = computed(() => Math.ceil(filteredUsers.value.length / itemsPerPage));
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage);
+const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage, filteredUsers.value.length));
+
+const allSelected = computed(() => {
+  return paginatedUsers.value.length > 0 && selectedUsers.value.length === paginatedUsers.value.length;
 });
 
 // Methods
 const fetchUsers = async () => {
-  loading.value = true;
   try {
-    users.value = await listUsers();
+    loading.value = true;
+    const response = await listUsers();
+    users.value = response;
   } catch (error) {
     console.error('Error fetching users:', error);
   } finally {
@@ -334,76 +322,66 @@ const fetchUsers = async () => {
   }
 };
 
-const refreshUsers = () => {
-  fetchUsers();
-};
-
 const createUser = async () => {
-  creating.value = true;
   try {
     await createUserAPI(newUser.value);
     showCreateModal.value = false;
-    newUser.value = {
-      full_name: '',
-      email: '',
-      password: '',
-      role: 'user',
-      qualification: '',
-      date_of_birth: ''
-    };
-    fetchUsers();
+    newUser.value = { full_name: '', username: '', email: '', password: '', role: 'user' };
+    await fetchUsers();
   } catch (error) {
     console.error('Error creating user:', error);
-  } finally {
-    creating.value = false;
-  }
-};
-
-const editUser = (user) => {
-  editingUser.value = { ...user };
-  showEditModal.value = true;
-};
-
-const updateUser = async () => {
-  updating.value = true;
-  try {
-    const payload = { ...editingUser.value };
-    if (!payload.password) {
-      delete payload.password;
-    }
-    await updateUserAPI(editingUser.value.id, payload);
-    showEditModal.value = false;
-    fetchUsers();
-  } catch (error) {
-    console.error('Error updating user:', error);
-  } finally {
-    updating.value = false;
   }
 };
 
 const deleteUser = async (userId) => {
-  if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+  if (confirm('Are you sure you want to delete this user?')) {
     try {
       await deleteUserAPI(userId);
-      fetchUsers();
+      await fetchUsers();
+      selectedUsers.value = selectedUsers.value.filter(id => id !== userId);
     } catch (error) {
       console.error('Error deleting user:', error);
     }
   }
 };
 
-const viewUser = (user) => {
-  viewingUser.value = { ...user };
-  showViewModal.value = true;
+const deleteSelected = async () => {
+  if (confirm(`Are you sure you want to delete ${selectedUsers.value.length} users?`)) {
+    try {
+      for (const userId of selectedUsers.value) {
+        await deleteUserAPI(userId);
+      }
+      await fetchUsers();
+      selectedUsers.value = [];
+    } catch (error) {
+      console.error('Error deleting users:', error);
+    }
+  }
 };
 
-const getUserInitials = (name) => {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+const editUser = (user) => {
+  // Implement edit functionality
+  console.log('Edit user:', user);
 };
 
-const getRoleBadgeClass = (role) => {
-  return role === 'admin' ? 'role-admin' : 'role-user';
+const toggleSelectAll = () => {
+  if (allSelected.value) {
+    selectedUsers.value = [];
+  } else {
+    selectedUsers.value = paginatedUsers.value.map(user => user.id);
+  }
+};
+
+const previousPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
 };
 
 const formatDate = (dateString) => {
@@ -411,26 +389,21 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString();
 };
 
-// Watch for filter changes
-const watchFilters = () => {
-  currentPage.value = 1;
-};
-
-// Lifecycle
 onMounted(() => {
   fetchUsers();
 });
 </script>
 
 <style scoped>
+/* Page Header */
 .page-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
+  width: 100%;
 }
 
 .header-content {
@@ -439,238 +412,369 @@ onMounted(() => {
   align-items: center;
 }
 
-.header-left h1 {
-  color: #2d3748;
-  margin: 0 0 0.5rem 0;
-  font-size: 2rem;
-  font-weight: 700;
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin: 0 0 4px 0;
 }
 
 .page-subtitle {
-  color: #718096;
+  font-size: 14px;
+  color: #666;
   margin: 0;
 }
 
+/* Filters Section */
 .filters-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 16px;
   align-items: center;
+  width: 100%;
 }
 
 .search-box {
-  position: relative;
   flex: 1;
+  position: relative;
+  max-width: 400px;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #E0E0E0;
   border-radius: 8px;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  background: #F8F9FA;
 }
 
-.search-icon {
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #718096;
+.search-input:focus {
+  outline: none;
+  border-color: #1976D2;
+  background: white;
 }
 
 .filter-select {
-  padding: 0.75rem 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  border: 1px solid #E0E0E0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  font-size: 1rem;
+  font-size: 14px;
+  background: #F8F9FA;
+  min-width: 120px;
 }
 
+.filter-select:focus {
+  outline: none;
+  border-color: #1976D2;
+  background: white;
+}
+
+/* Table Container */
 .table-container {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
+  overflow: hidden;
+  width: 100%;
 }
 
 .table-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #E0E0E0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  background: #F8F9FA;
 }
 
-.table-header h3 {
-  color: #2d3748;
-  margin: 0;
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.users-table {
+.selected-count {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.table-actions-right {
+  display: flex;
+  gap: 8px;
+}
+
+.table-wrapper {
   overflow-x: auto;
+  width: 100%;
 }
 
-.table {
+/* Data Table */
+.data-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 100%;
 }
 
-.table th,
-.table td {
-  padding: 1rem;
+.data-table th {
+  background: #F8F9FA;
+  padding: 16px 24px;
   text-align: left;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.table th {
-  background: rgba(66, 153, 225, 0.1);
+  font-size: 14px;
   font-weight: 600;
-  color: #2d3748;
+  color: #1A1A1A;
+  border-bottom: 1px solid #E0E0E0;
 }
 
-.user-row:hover {
-  background: rgba(66, 153, 225, 0.05);
+.data-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid #F0F0F0;
+  font-size: 14px;
+  color: #1A1A1A;
 }
 
+.data-table tr:hover {
+  background: #F8F9FA;
+}
+
+.checkbox-column {
+  width: 48px;
+}
+
+.actions-column {
+  width: 120px;
+}
+
+/* Checkbox Styles */
+.checkbox-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkmark {
+  height: 18px;
+  width: 18px;
+  background-color: white;
+  border: 2px solid #E0E0E0;
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.checkbox:checked ~ .checkmark {
+  background-color: #1976D2;
+  border-color: #1976D2;
+}
+
+.checkbox:checked ~ .checkmark:after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* User Info */
 .user-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .user-avatar {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-  color: white;
+  width: 32px;
+  height: 32px;
+  background: #E3F2FD;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 0.9rem;
+  color: #1976D2;
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
 }
 
 .user-name {
-  font-weight: 600;
-  color: #2d3748;
+  font-weight: 500;
+  color: #1A1A1A;
 }
 
-.user-id {
-  font-size: 0.8rem;
-  color: #718096;
+.user-username {
+  font-size: 12px;
+  color: #666;
 }
 
-.role-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
+/* Badges */
+.role-badge,
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
 }
 
 .role-admin {
-  background: rgba(245, 101, 101, 0.1);
-  color: #c53030;
+  background: rgba(156, 39, 176, 0.1);
+  color: #7B1FA2;
 }
 
 .role-user {
-  background: rgba(72, 187, 120, 0.1);
-  color: #38a169;
+  background: rgba(76, 175, 80, 0.1);
+  color: #388E3C;
 }
 
+.status-active {
+  background: rgba(76, 175, 80, 0.1);
+  color: #388E3C;
+}
+
+/* Action Buttons */
 .action-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .btn {
-  padding: 0.5rem 1rem;
+  padding: 8px 16px;
   border: none;
   border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  text-decoration: none;
 }
 
 .btn-sm {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.875rem;
+  padding: 6px 12px;
+  font-size: 12px;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  background: #1976D2;
   color: white;
 }
 
+.btn-primary:hover {
+  background: #1565C0;
+}
+
 .btn-secondary {
-  background: rgba(113, 128, 150, 0.1);
-  color: #4a5568;
+  background: #F5F5F5;
+  color: #666;
 }
 
-.btn-info {
-  background: rgba(66, 153, 225, 0.1);
-  color: #3182ce;
-}
-
-.btn-warning {
-  background: rgba(237, 137, 54, 0.1);
-  color: #dd6b20;
+.btn-secondary:hover {
+  background: #E0E0E0;
 }
 
 .btn-danger {
-  background: rgba(245, 101, 101, 0.1);
-  color: #e53e3e;
+  background: rgba(244, 67, 54, 0.1);
+  color: #D32F2F;
 }
 
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.btn-danger:hover {
+  background: rgba(244, 67, 54, 0.2);
+}
+
+.btn-info {
+  background: rgba(33, 150, 243, 0.1);
+  color: #1976D2;
+}
+
+.btn-info:hover {
+  background: rgba(33, 150, 243, 0.2);
+}
+
+.btn-icon {
+  padding: 8px;
+  min-width: 32px;
+  justify-content: center;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
 }
 
+/* Pagination */
 .pagination {
+  padding: 20px 24px;
+  border-top: 1px solid #E0E0E0;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background: #F8F9FA;
 }
 
 .page-info {
-  color: #718096;
+  font-size: 14px;
+  color: #666;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-numbers {
+  font-size: 14px;
+  color: #666;
   font-weight: 500;
 }
 
+/* Loading and Empty States */
 .loading-state,
 .empty-state {
   text-align: center;
-  padding: 3rem 1rem;
-  color: #718096;
+  padding: 60px 24px;
+  color: #666;
 }
 
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(66, 153, 225, 0.1);
-  border-left: 4px solid #4299e1;
+  border: 4px solid #E3F2FD;
+  border-left: 4px solid #1976D2;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
+  margin: 0 auto 16px;
 }
 
 @keyframes spin {
@@ -679,9 +783,20 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  margin-bottom: 16px;
   opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  font-size: 14px;
+  margin: 0;
 }
 
 /* Modal Styles */
@@ -696,163 +811,94 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 24px;
 }
 
 .modal-content {
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  max-width: 500px;
+  background: white;
+  border-radius: 12px;
   width: 100%;
+  max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
+  padding: 24px 24px 0 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.modal-header h3 {
+.modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1A1A1A;
   margin: 0;
-  color: #2d3748;
 }
 
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  color: #666;
   cursor: pointer;
-  color: #718096;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
+  padding: 8px;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .modal-close:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: #2d3748;
+  background: #F5F5F5;
+  color: #1A1A1A;
 }
 
-.modal-body {
-  padding: 2rem;
+.modal-form {
+  padding: 24px;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 20px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #2d3748;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A1A1A;
+  margin-bottom: 8px;
 }
 
-.form-control {
+.form-input,
+.form-select {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  border: 1px solid #E0E0E0;
   border-radius: 8px;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.9);
-  transition: all 0.2s ease;
+  font-size: 14px;
+  background: #F8F9FA;
 }
 
-.form-control:focus {
+.form-input:focus,
+.form-select:focus {
   outline: none;
-  border-color: #4299e1;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+  border-color: #1976D2;
+  background: white;
 }
 
 .modal-actions {
   display: flex;
-  gap: 1rem;
+  gap: 12px;
   justify-content: flex-end;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-/* User Profile Styles */
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.profile-avatar {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 1.2rem;
-}
-
-.profile-info h4 {
-  margin: 0 0 0.25rem 0;
-  color: #2d3748;
-}
-
-.user-email {
-  color: #718096;
-  margin: 0 0 0.5rem 0;
-}
-
-.user-details-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.detail-item:last-child {
-  border-bottom: none;
-}
-
-.detail-item label {
-  font-weight: 600;
-  color: #2d3748;
-}
-
-.detail-item span {
-  color: #718096;
+  margin-top: 24px;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .page-header {
-    padding: 1rem;
-  }
-  
   .header-content {
     flex-direction: column;
-    gap: 1rem;
-    text-align: center;
+    gap: 16px;
+    align-items: flex-start;
   }
   
   .filters-section {
@@ -860,26 +906,34 @@ onMounted(() => {
     align-items: stretch;
   }
   
-  .table-container {
-    padding: 1rem;
+  .search-box {
+    max-width: none;
   }
   
-  .users-table {
-    font-size: 0.9rem;
-  }
-  
-  .table th,
-  .table td {
-    padding: 0.5rem;
-  }
-  
-  .action-buttons {
+  .table-header {
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .data-table {
+    font-size: 12px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 12px 16px;
   }
   
   .modal-content {
-    margin: 1rem;
+    margin: 16px;
+    max-width: none;
   }
 }
 </style> 

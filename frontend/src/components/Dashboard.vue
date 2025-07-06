@@ -20,9 +20,7 @@
           </div>
           <button @click="logout" class="logout-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.59L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
             </svg>
             Logout
           </button>
@@ -31,22 +29,26 @@
     </header>
 
     <div class="dashboard-content">
-      <!-- Sidebar -->
+      <!-- Sidebar for Admin Users -->
       <aside class="dashboard-sidebar" v-if="isAdmin">
         <nav class="sidebar-nav">
           <button 
             @click="navigateToAdminDashboard" 
             class="nav-item"
           >
-            <span>👨‍💼</span>
-            Admin Dashboard
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
+            </svg>
+            <span>Admin Dashboard</span>
           </button>
           <button 
             @click="navigateToUsers" 
             class="nav-item"
           >
-            <span>👥</span>
-            User Management
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 4C16 5.10457 15.1046 6 14 6C12.8954 6 12 5.10457 12 4C12 2.89543 12.8954 2 14 2C15.1046 2 16 2.89543 16 4ZM21 10V9C21 7.89543 20.1046 7 19 7C18.6357 7 18.2942 7.09739 17.9999 7.26722C17.9999 7.08908 18 6.91077 18 6.73242C18 4.6863 16.2091 3 14 3C12.3438 3 10.8438 3.78778 10 5.02113C9.15625 3.78778 7.65625 3 6 3C3.79086 3 2 4.6863 2 6.73242C2 6.91077 2.00008 7.08908 2.00008 7.26722C1.70581 7.09739 1.36426 7 1 7C-0.104569 7 -1 7.89543 -1 9V10C-1 11.1046 -0.104569 12 1 12H21C22.1046 12 23 11.1046 23 10ZM8 17C8 15.8954 7.10457 15 6 15C4.89543 15 4 15.8954 4 17C4 18.1046 4.89543 19 6 19C7.10457 19 8 18.1046 8 17ZM22 17C22 15.8954 21.1046 15 20 15C18.8954 15 18 15.8954 18 17C18 18.1046 18.8954 19 20 19C21.1046 19 22 18.1046 22 17ZM13 15C13 13.8954 12.1046 13 11 13C9.89543 13 9 13.8954 9 15C9 16.1046 9.89543 17 11 17C12.1046 17 13 16.1046 13 15Z" fill="currentColor"/>
+            </svg>
+            <span>User Management</span>
           </button>
         </nav>
       </aside>
@@ -55,9 +57,38 @@
       <main class="dashboard-main">
         <template v-if="isAdmin">
           <div class="content-wrapper">
-            <div class="welcome-message">
+            <div class="welcome-section">
               <h2>Welcome to QuizMaster Admin</h2>
               <p>Use the navigation buttons to access different admin functions.</p>
+            </div>
+            
+            <div class="quick-actions">
+              <h3>Quick Actions</h3>
+              <div class="actions-grid">
+                <div class="action-card" @click="navigateToAdminDashboard">
+                  <div class="action-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
+                    </svg>
+                  </div>
+                  <div class="action-content">
+                    <h4>Admin Dashboard</h4>
+                    <p>Access the full admin panel</p>
+                  </div>
+                </div>
+                
+                <div class="action-card" @click="navigateToUsers">
+                  <div class="action-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M16 4C16 5.10457 15.1046 6 14 6C12.8954 6 12 5.10457 12 4C12 2.89543 12.8954 2 14 2C15.1046 2 16 2.89543 16 4ZM21 10V9C21 7.89543 20.1046 7 19 7C18.6357 7 18.2942 7.09739 17.9999 7.26722C17.9999 7.08908 18 6.91077 18 6.73242C18 4.6863 16.2091 3 14 3C12.3438 3 10.8438 3.78778 10 5.02113C9.15625 3.78778 7.65625 3 6 3C3.79086 3 2 4.6863 2 6.73242C2 6.91077 2.00008 7.08908 2.00008 7.26722C1.70581 7.09739 1.36426 7 1 7C-0.104569 7 -1 7.89543 -1 9V10C-1 11.1046 -0.104569 12 1 12H21C22.1046 12 23 11.1046 23 10ZM8 17C8 15.8954 7.10457 15 6 15C4.89543 15 4 15.8954 4 17C4 18.1046 4.89543 19 6 19C7.10457 19 8 18.1046 8 17ZM22 17C22 15.8954 21.1046 15 20 15C18.8954 15 18 15.8954 18 17C18 18.1046 18.8954 19 20 19C21.1046 19 22 18.1046 22 17ZM13 15C13 13.8954 12.1046 13 11 13C9.89543 13 9 13.8954 9 15C9 16.1046 9.89543 17 11 17C12.1046 17 13 16.1046 13 15Z" fill="currentColor"/>
+                    </svg>
+                  </div>
+                  <div class="action-content">
+                    <h4>User Management</h4>
+                    <p>Manage users and permissions</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </template>
@@ -73,7 +104,6 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import QuizView from "./QuizView.vue";
-
 
 const router = useRouter();
 const isAdmin = ref(false);
@@ -107,17 +137,21 @@ onMounted(() => {
 .dashboard-container {
   min-height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  background-color: #F5F6FA;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .dashboard-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  padding: 1rem 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: white;
+  border-bottom: 1px solid #E0E0E0;
+  padding: 0 32px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  width: 100vw;
 }
 
 .header-content {
@@ -126,38 +160,36 @@ onMounted(() => {
   align-items: center;
   width: 100%;
   margin: 0 auto;
+  max-width: none;
 }
 
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .logo-icon {
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
   color: white;
-  padding: 0.5rem;
-  border-radius: 12px;
+  padding: 8px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .logo-text {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1A1A1A;
   margin: 0;
 }
 
 .user-section {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 16px;
 }
 
 .user-info {
@@ -167,14 +199,14 @@ onMounted(() => {
 }
 
 .user-name {
+  font-size: 14px;
   font-weight: 600;
-  color: #2d3748;
-  font-size: 0.95rem;
+  color: #1A1A1A;
 }
 
 .user-role {
-  font-size: 0.8rem;
-  color: #718096;
+  font-size: 12px;
+  color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -182,60 +214,60 @@ onMounted(() => {
 .logout-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: #e53e3e;
-  color: white;
+  gap: 8px;
+  background: transparent;
   border: none;
-  padding: 0.5rem 1rem;
+  color: #666;
+  padding: 8px 12px;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .logout-btn:hover {
-  background: #c53030;
-  transform: translateY(-1px);
+  background: #F5F5F5;
+  color: #1976D2;
 }
 
 .dashboard-content {
   display: flex;
   flex: 1;
-  width: 100%;
+  width: 100vw;
   margin: 0 auto;
-  padding: 2rem;
-  gap: 2rem;
+  padding: 32px;
+  gap: 32px;
+  max-width: none;
 }
 
 .dashboard-sidebar {
-  width: 300px;
+  width: 280px;
   flex-shrink: 0;
 }
 
 .sidebar-nav {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 8px;
+  border: 1px solid #E0E0E0;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
+  gap: 12px;
+  padding: 12px 16px;
   border: none;
   background: transparent;
-  color: #4a5568;
-  font-size: 0.95rem;
+  color: #666;
+  font-size: 14px;
   font-weight: 500;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
@@ -243,61 +275,123 @@ onMounted(() => {
 }
 
 .nav-item:hover {
-  background: rgba(66, 153, 225, 0.1);
-  color: #3182ce;
-  transform: translateX(4px);
+  background: #E3F2FD;
+  color: #1976D2;
 }
 
-.nav-item.active {
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+.nav-item svg {
+  flex-shrink: 0;
 }
 
 .dashboard-main {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .content-wrapper {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   min-height: calc(100vh - 200px);
   width: 100%;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid #E0E0E0;
 }
 
-.welcome-message {
+.welcome-section {
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 48px 24px;
+  margin-bottom: 48px;
 }
 
-.welcome-message h2 {
-  font-size: 2.5rem;
+.welcome-section h2 {
+  font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 1rem;
+  color: #1A1A1A;
+  margin-bottom: 16px;
 }
 
-.welcome-message p {
-  font-size: 1.1rem;
-  color: #718096;
+.welcome-section p {
+  font-size: 16px;
+  color: #666;
   max-width: 600px;
   margin: 0 auto;
   line-height: 1.6;
+}
+
+.quick-actions {
+  margin-bottom: 32px;
+}
+
+.quick-actions h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 24px;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.action-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #E0E0E0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.action-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  border-color: #1976D2;
+}
+
+.action-icon {
+  width: 56px;
+  height: 56px;
+  background: #E3F2FD;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976D2;
+  flex-shrink: 0;
+}
+
+.action-content {
+  flex: 1;
+}
+
+.action-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin: 0 0 4px 0;
+}
+
+.action-content p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
   .dashboard-content {
     flex-direction: column;
-    padding: 1rem;
+    padding: 24px 16px;
+    width: 100vw;
   }
   
   .dashboard-sidebar {
@@ -307,35 +401,45 @@ onMounted(() => {
   .sidebar-nav {
     flex-direction: row;
     overflow-x: auto;
-    padding: 1rem;
+    padding: 16px;
+    width: 100%;
   }
   
   .nav-item {
     white-space: nowrap;
-    min-width: 120px;
+    min-width: 160px;
   }
 }
 
 @media (min-width: 1400px) {
   .dashboard-content {
-    padding: 2rem 3rem;
+    padding: 32px 48px;
+    width: 100vw;
   }
   
   .content-wrapper {
-    padding: 3rem;
+    padding: 48px;
+    width: 100%;
   }
 }
 
 @media (max-width: 768px) {
+  .dashboard-header {
+    padding: 0 16px;
+    height: 64px;
+    width: 100vw;
+  }
+  
   .header-content {
     flex-direction: column;
-    gap: 1rem;
+    gap: 12px;
     text-align: center;
+    width: 100%;
   }
   
   .user-section {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 8px;
   }
   
   .user-info {
@@ -343,11 +447,36 @@ onMounted(() => {
   }
   
   .dashboard-content {
-    padding: 0.5rem;
+    padding: 16px;
+    width: 100vw;
   }
   
   .content-wrapper {
-    padding: 1rem;
+    padding: 24px;
+    width: 100%;
+  }
+  
+  .welcome-section {
+    padding: 32px 16px;
+  }
+  
+  .welcome-section h2 {
+    font-size: 24px;
+  }
+  
+  .actions-grid {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  
+  .action-card {
+    padding: 20px;
+    width: 100%;
+  }
+  
+  .action-icon {
+    width: 48px;
+    height: 48px;
   }
 }
 

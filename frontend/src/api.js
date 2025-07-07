@@ -81,7 +81,8 @@ export const deleteChapter = (id) =>
   apiFetch(`/delete_chapters/${id}`, { method: "DELETE" });
 
 // Quizzes
-export const getQuizzes = () => apiFetch("/api/quizzes");
+export const getQuizzes = () =>
+  apiFetch("/api/quizzes").then((res) => res.quizzes);
 export const createQuiz = (data) =>
   apiFetch("/create_quizzes", {
     method: "POST",

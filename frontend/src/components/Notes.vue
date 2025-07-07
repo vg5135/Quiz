@@ -49,7 +49,47 @@
           </div>
           <div v-else class="note-editor">
             <input v-model="selectedNote.title" @blur="updateNoteTitle" class="note-title-input" placeholder="Note title..." />
-            <textarea v-model="selectedNote.content" @input="updateNoteContent" class="note-content-textarea" placeholder="Start writing your note here..."></textarea>
+            <textarea
+              v-model="selectedNote.content"
+              @input="updateNoteContent"
+              class="note-content-textarea"
+              placeholder="Start writing your note here..."
+              @contextmenu="showCustomMenu"
+            ></textarea>
+            <!-- Custom context menu -->
+            <div v-if="customMenu.visible" class="context-menu" :style="{ top: customMenu.y + 'px', left: customMenu.x + 'px' }" @mousedown.stop>
+              <div class="menu-item" @click="openNotePicker">Hyperlink to Note</div>
+            </div>
+            <!-- Note picker modal -->
+            <div v-if="notePicker.visible" class="note-picker-modal">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <span>Select note to link</span>
+                  <button class="close-btn" @click="closeNotePicker">&times;</button>
+                </div>
+                <div class="modal-list">
+                  <div v-for="note in notes.filter(n => n.id !== selectedNote.id)" :key="note.id" class="modal-note-item" @click="pickNoteToLink(note)">
+                    {{ note.title }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Render note:// links as clickable with hover preview -->
+            <div v-if="selectedNote.content" class="note-content-rendered">
+              <span v-for="(part, idx) in parseNoteLinks(selectedNote.content)" :key="idx">
+                <template v-if="part.type === 'link'">
+                  <a href="#" @click.prevent="selectNoteById(part.noteId)" @mouseenter="showNotePreview(part.noteId, $event)" @mouseleave="hideNotePreview">
+                    {{ part.text }}
+                  </a>
+                </template>
+                <template v-else>{{ part.text }}</template>
+              </span>
+            </div>
+            <!-- Note preview popup -->
+            <div v-if="previewNote" class="note-preview-popup" :style="{ top: previewPos.y + 'px', left: previewPos.x + 'px' }">
+              <h4>{{ previewNote.title }}</h4>
+              <pre>{{ previewNote.content }}</pre>
+            </div>
           </div>
         </div>
       </div>
@@ -58,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { getNotes, createNotes, getNotesDetail, updateNotes, deleteNotes } from '../api';
 
 const props = defineProps({
@@ -140,12 +180,57 @@ const formatDate = (dateString) => {
   });
 };
 
+// Custom context menu
+const customMenu = ref({ visible: false, x: 0, y: 0, selection: '', anchorStart: 0, anchorEnd: 0 });
+const showCustomMenu = (e) => {
+  const textarea = e.target;
+  const selection = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+  if (selection) {
+    e.preventDefault();
+    customMenu.value = {
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      selection,
+      anchorStart: textarea.selectionStart,
+      anchorEnd: textarea.selectionEnd
+    };
+  } else {
+    customMenu.value.visible = false;
+  }
+};
+const hideCustomMenu = (e) => {
+  if (!e || !e.target || !e.target.closest('.context-menu')) {
+    customMenu.value.visible = false;
+  }
+};
+
+const notePicker = ref({ visible: false });
+const openNotePicker = () => {
+  notePicker.value.visible = true;
+  hideCustomMenu();
+};
+const closeNotePicker = () => { notePicker.value.visible = false; };
+const pickNoteToLink = (note) => {
+  const textarea = document.querySelector('.note-content-textarea');
+  if (!textarea) return;
+  const before = selectedNote.value.content.substring(0, customMenu.value.anchorStart);
+  const after = selectedNote.value.content.substring(customMenu.value.anchorEnd);
+  const link = `[${customMenu.value.selection}](note://${note.id})`;
+  selectedNote.value.content = before + link + after;
+  updateNoteContent();
+  notePicker.value.visible = false;
+  nextTick(() => textarea.focus());
+};
+
 onMounted(() => {
   fetchNotes();
   window.addEventListener('note-updated', handleNoteUpdated);
+  document.addEventListener('mousedown', hideCustomMenu);
 });
 onUnmounted(() => {
   window.removeEventListener('note-updated', handleNoteUpdated);
+  document.removeEventListener('mousedown', hideCustomMenu);
 });
 
 function handleNoteUpdated(e) {
@@ -153,6 +238,41 @@ function handleNoteUpdated(e) {
     selectNote(selectedNote.value);
   }
 }
+
+// Helper to parse note:// links in content
+function parseNoteLinks(content) {
+  const regex = /\[([^\]]+)\]\(note:\/\/(\d+)\)/g;
+  let lastIndex = 0;
+  let match;
+  const parts = [];
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', text: content.substring(lastIndex, match.index) });
+    }
+    parts.push({ type: 'link', text: match[1], noteId: Number(match[2]) });
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < content.length) {
+    parts.push({ type: 'text', text: content.substring(lastIndex) });
+  }
+  return parts;
+}
+
+// Select note by ID
+const selectNoteById = async (id) => {
+  const note = notes.value.find(n => n.id === id);
+  if (note) await selectNote(note);
+};
+
+// Note preview popup
+const previewNote = ref(null);
+const previewPos = ref({ x: 0, y: 0 });
+const showNotePreview = async (id, event) => {
+  const resp = await getNotesDetail(id);
+  previewNote.value = resp.notes;
+  previewPos.value = { x: event.clientX + 10, y: event.clientY + 10 };
+};
+const hideNotePreview = () => { previewNote.value = null; };
 </script>
 
 <style scoped>
@@ -383,5 +503,91 @@ function handleNoteUpdated(e) {
   .note-editor { padding: 8px 0; }
   .note-title-input { font-size: 1.2rem; }
   .note-content-textarea { padding: 10px; }
+}
+.context-menu {
+  position: fixed;
+  z-index: 2000;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  min-width: 180px;
+  padding: 8px 0;
+  border: 1px solid #e0e0e0;
+}
+.menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.15s;
+}
+.menu-item:hover {
+  background: #f0f8ff;
+}
+.note-picker-modal {
+  position: fixed;
+  z-index: 3000;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  min-width: 320px;
+  max-width: 90vw;
+  padding: 24px;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+.modal-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.modal-note-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  font-size: 16px;
+}
+.modal-note-item:hover {
+  background: #f0f8ff;
+}
+.note-preview-popup {
+  position: fixed;
+  z-index: 3000;
+  background: #fff;
+  border: 1px solid #1976d2;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(25,118,210,0.18);
+  padding: 16px;
+  min-width: 250px;
+  max-width: 400px;
+  max-height: 300px;
+  overflow: auto;
+}
+.note-preview-popup h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #1976d2;
+}
+.note-preview-popup pre {
+  margin: 0;
+  font-size: 14px;
+  white-space: pre-wrap;
 }
 </style> 

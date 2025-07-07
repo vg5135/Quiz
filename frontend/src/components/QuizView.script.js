@@ -109,7 +109,10 @@ const logout = () => {
   router.push("/login");
 };
 
+const isLoading = ref(true);
+
 const fetchData = async () => {
+  isLoading.value = true;
   try {
     console.log("📊 Fetching all data...");
 
@@ -164,8 +167,8 @@ const fetchData = async () => {
     }
 
     console.log("All data loaded successfully");
-  } catch (error) {
-    console.error("Error in fetchData:", error);
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -753,4 +756,5 @@ export {
   getEmptyStateMessage,
   isSidebarCollapsed,
   toggleSidebar,
+  isLoading,
 };

@@ -900,7 +900,7 @@ def get_quizzes():
                 # Skip problematic quizzes instead of failing completely
                 continue
         
-        return jsonify(quiz_list)
+        return jsonify({"quizzes": quiz_list})
     except Exception as e:
         print(f"Error in get_quizzes: {str(e)}")
         return jsonify({"error": "Internal server error", "message": str(e)}), 500

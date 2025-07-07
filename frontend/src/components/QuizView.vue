@@ -583,7 +583,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import Notes from './Notes.vue';
 // Import all the reactive variables and functions from the external script file
 import {
@@ -661,6 +661,10 @@ const openNotes = () => {
 const closeNotes = () => {
   showNotes.value = false;
 };
+
+onMounted(() => {
+  fetchData();
+});
 </script>
 
 <style scoped>

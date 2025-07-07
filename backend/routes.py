@@ -1478,6 +1478,7 @@ def get_notes():
             note_data = {
                 "id": note.id,
                 "title": note.title,
+                "content": note.content,
                 "created_at": note.created_at.isoformat(),
                 "updated_at": note.updated_at.isoformat(),
                 "page_count": len(note.pages)
@@ -1521,29 +1522,23 @@ def create_notes():
         
         data = request.json
         title = data.get('title', 'Untitled Notes')
+        content = data.get('content', '')
+        color = data.get('color')
         print("Creating notes with title:", title)
         
-        notes = Notes(user_id=user.id, title=title)
+        notes = Notes(user_id=user.id, title=title, content=content)
+        if color:
+            notes.color = color
         db.session.add(notes)
         db.session.commit()
         print("Notes created with ID:", notes.id)
-        
-        # Create a default first page
-        first_page = NotePage(
-            notes_id=notes.id,
-            title="Page 1",
-            content="",
-            page_number=1
-        )
-        db.session.add(first_page)
-        db.session.commit()
-        print("First page created with ID:", first_page.id)
         
         response_data = {
             "message": "Notes created successfully",
             "notes": {
                 "id": notes.id,
                 "title": notes.title,
+                "content": notes.content,
                 "created_at": notes.created_at.isoformat(),
                 "updated_at": notes.updated_at.isoformat()
             }
@@ -1575,28 +1570,13 @@ def get_notes_detail(notes_id):
         if not notes:
             return jsonify({"message": "Notes not found"}), 404
         
-        pages_data = []
-        for page in notes.pages:
-            page_data = {
-                "id": page.id,
-                "title": page.title,
-                "content": page.content,
-                "page_number": page.page_number,
-                "created_at": page.created_at.isoformat(),
-                "updated_at": page.updated_at.isoformat()
-            }
-            pages_data.append(page_data)
-        
-        # Sort pages by page number
-        pages_data.sort(key=lambda x: x['page_number'])
-        
         return jsonify({
             "notes": {
                 "id": notes.id,
                 "title": notes.title,
+                "content": notes.content,
                 "created_at": notes.created_at.isoformat(),
-                "updated_at": notes.updated_at.isoformat(),
-                "pages": pages_data
+                "updated_at": notes.updated_at.isoformat()
             }
         }), 200
     except Exception as e:
@@ -1621,6 +1601,8 @@ def update_notes(notes_id):
         
         data = request.json
         notes.title = data.get('title', notes.title)
+        if 'content' in data:
+            notes.content = data['content']
         notes.updated_at = datetime.datetime.utcnow()
         db.session.commit()
         

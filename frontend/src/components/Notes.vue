@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { getNotes, createNotes, getNotesDetail, updateNotes, deleteNotes } from '../api';
 
 const props = defineProps({
@@ -140,7 +140,19 @@ const formatDate = (dateString) => {
   });
 };
 
-onMounted(fetchNotes);
+onMounted(() => {
+  fetchNotes();
+  window.addEventListener('note-updated', handleNoteUpdated);
+});
+onUnmounted(() => {
+  window.removeEventListener('note-updated', handleNoteUpdated);
+});
+
+function handleNoteUpdated(e) {
+  if (selectedNote.value && selectedNote.value.id === e.detail.id) {
+    selectNote(selectedNote.value);
+  }
+}
 </script>
 
 <style scoped>

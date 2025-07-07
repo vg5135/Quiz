@@ -132,6 +132,7 @@ class Notes(db.Model):
     title = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    content = db.Column(db.Text)
     pages = db.relationship('NotePage', backref='notes', lazy=True, cascade='all, delete-orphan')
 
     def __repr__(self):

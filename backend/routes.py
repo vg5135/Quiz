@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, render_template
 from flask_jwt_extended import create_access_token, decode_token, get_jwt, jwt_required, verify_jwt_in_request
-from models import db, bcrypt, Subject, Quiz, Question, Score, User, Chapter
+from models import db, bcrypt, Subject, Quiz, Question, Score, User, Chapter, Notes, NotePage
 from rbac import role_required
 from chatbot import chatbot
 import datetime
@@ -1444,3 +1444,348 @@ D: Mars
 Correct: C"""
     
     return jsonify({"template": template})
+
+# Notes Routes
+@routes.route('/api/notes', methods=['GET'])
+@role_required('user')
+def get_notes():
+    """Get all notes for the current user"""
+    try:
+        print("=== GET NOTES DEBUG ===")
+        print("Request method:", request.method)
+        print("Request headers:", dict(request.headers))
+        
+        # Get user from JWT token
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        print("User email from JWT:", user_email)
+        
+        user = User.query.filter_by(email=user_email).first()
+        print("User found:", user is not None)
+        if user:
+            print("User ID:", user.id)
+        
+        if not user:
+            print("User not found, returning 404")
+            return jsonify({"message": "User not found"}), 404
+        
+        notes = Notes.query.filter_by(user_id=user.id).order_by(Notes.updated_at.desc()).all()
+        print("Found notes count:", len(notes))
+        
+        notes_data = []
+        for note in notes:
+            note_data = {
+                "id": note.id,
+                "title": note.title,
+                "created_at": note.created_at.isoformat(),
+                "updated_at": note.updated_at.isoformat(),
+                "page_count": len(note.pages)
+            }
+            notes_data.append(note_data)
+            print(f"Note {note.id}: {note.title} with {len(note.pages)} pages")
+        
+        response_data = {"notes": notes_data}
+        print("Returning response:", response_data)
+        return jsonify(response_data), 200
+    except Exception as e:
+        print("ERROR in get_notes:", str(e))
+        print("Error type:", type(e))
+        import traceback
+        traceback.print_exc()
+        return jsonify({"message": f"Error fetching notes: {str(e)}"}), 500
+
+@routes.route('/api/notes', methods=['POST'])
+@role_required('user')
+def create_notes():
+    """Create a new notes collection"""
+    try:
+        print("=== CREATE NOTES DEBUG ===")
+        print("Request method:", request.method)
+        print("Request headers:", dict(request.headers))
+        print("Request data:", request.get_json())
+        
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        print("User email from JWT:", user_email)
+        
+        user = User.query.filter_by(email=user_email).first()
+        print("User found:", user is not None)
+        if user:
+            print("User ID:", user.id)
+        
+        if not user:
+            print("User not found, returning 404")
+            return jsonify({"message": "User not found"}), 404
+        
+        data = request.json
+        title = data.get('title', 'Untitled Notes')
+        print("Creating notes with title:", title)
+        
+        notes = Notes(user_id=user.id, title=title)
+        db.session.add(notes)
+        db.session.commit()
+        print("Notes created with ID:", notes.id)
+        
+        # Create a default first page
+        first_page = NotePage(
+            notes_id=notes.id,
+            title="Page 1",
+            content="",
+            page_number=1
+        )
+        db.session.add(first_page)
+        db.session.commit()
+        print("First page created with ID:", first_page.id)
+        
+        response_data = {
+            "message": "Notes created successfully",
+            "notes": {
+                "id": notes.id,
+                "title": notes.title,
+                "created_at": notes.created_at.isoformat(),
+                "updated_at": notes.updated_at.isoformat()
+            }
+        }
+        print("Returning response:", response_data)
+        return jsonify(response_data), 201
+    except Exception as e:
+        print("ERROR in create_notes:", str(e))
+        print("Error type:", type(e))
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({"message": f"Error creating notes: {str(e)}"}), 500
+
+@routes.route('/api/notes/<int:notes_id>', methods=['GET'])
+@role_required('user')
+def get_notes_detail(notes_id):
+    """Get detailed notes with all pages"""
+    try:
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        user = User.query.filter_by(email=user_email).first()
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        notes = Notes.query.filter_by(id=notes_id, user_id=user.id).first()
+        if not notes:
+            return jsonify({"message": "Notes not found"}), 404
+        
+        pages_data = []
+        for page in notes.pages:
+            page_data = {
+                "id": page.id,
+                "title": page.title,
+                "content": page.content,
+                "page_number": page.page_number,
+                "created_at": page.created_at.isoformat(),
+                "updated_at": page.updated_at.isoformat()
+            }
+            pages_data.append(page_data)
+        
+        # Sort pages by page number
+        pages_data.sort(key=lambda x: x['page_number'])
+        
+        return jsonify({
+            "notes": {
+                "id": notes.id,
+                "title": notes.title,
+                "created_at": notes.created_at.isoformat(),
+                "updated_at": notes.updated_at.isoformat(),
+                "pages": pages_data
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"message": f"Error fetching notes: {str(e)}"}), 500
+
+@routes.route('/api/notes/<int:notes_id>', methods=['PUT'])
+@role_required('user')
+def update_notes(notes_id):
+    """Update notes title"""
+    try:
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        user = User.query.filter_by(email=user_email).first()
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        notes = Notes.query.filter_by(id=notes_id, user_id=user.id).first()
+        if not notes:
+            return jsonify({"message": "Notes not found"}), 404
+        
+        data = request.json
+        notes.title = data.get('title', notes.title)
+        notes.updated_at = datetime.datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Notes updated successfully",
+            "notes": {
+                "id": notes.id,
+                "title": notes.title,
+                "updated_at": notes.updated_at.isoformat()
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error updating notes: {str(e)}"}), 500
+
+@routes.route('/api/notes/<int:notes_id>', methods=['DELETE'])
+@role_required('user')
+def delete_notes(notes_id):
+    """Delete notes and all its pages"""
+    try:
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        user = User.query.filter_by(email=user_email).first()
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        notes = Notes.query.filter_by(id=notes_id, user_id=user.id).first()
+        if not notes:
+            return jsonify({"message": "Notes not found"}), 404
+        
+        db.session.delete(notes)
+        db.session.commit()
+        
+        return jsonify({"message": "Notes deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error deleting notes: {str(e)}"}), 500
+
+@routes.route('/api/notes/<int:notes_id>/pages', methods=['POST'])
+@role_required('user')
+def create_note_page(notes_id):
+    """Create a new page in notes"""
+    try:
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        user = User.query.filter_by(email=user_email).first()
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        notes = Notes.query.filter_by(id=notes_id, user_id=user.id).first()
+        if not notes:
+            return jsonify({"message": "Notes not found"}), 404
+        
+        data = request.json
+        title = data.get('title', f"Page {len(notes.pages) + 1}")
+        content = data.get('content', '')
+        
+        # Get the next page number
+        max_page_number = max([page.page_number for page in notes.pages]) if notes.pages else 0
+        page_number = max_page_number + 1
+        
+        page = NotePage(
+            notes_id=notes.id,
+            title=title,
+            content=content,
+            page_number=page_number
+        )
+        db.session.add(page)
+        notes.updated_at = datetime.datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Page created successfully",
+            "page": {
+                "id": page.id,
+                "title": page.title,
+                "content": page.content,
+                "page_number": page.page_number,
+                "created_at": page.created_at.isoformat(),
+                "updated_at": page.updated_at.isoformat()
+            }
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error creating page: {str(e)}"}), 500
+
+@routes.route('/api/notes/<int:notes_id>/pages/<int:page_id>', methods=['PUT'])
+@role_required('user')
+def update_note_page(notes_id, page_id):
+    """Update a note page"""
+    try:
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        user = User.query.filter_by(email=user_email).first()
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        notes = Notes.query.filter_by(id=notes_id, user_id=user.id).first()
+        if not notes:
+            return jsonify({"message": "Notes not found"}), 404
+        
+        page = NotePage.query.filter_by(id=page_id, notes_id=notes_id).first()
+        if not page:
+            return jsonify({"message": "Page not found"}), 404
+        
+        data = request.json
+        if 'title' in data:
+            page.title = data['title']
+        if 'content' in data:
+            page.content = data['content']
+        
+        page.updated_at = datetime.datetime.utcnow()
+        notes.updated_at = datetime.datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Page updated successfully",
+            "page": {
+                "id": page.id,
+                "title": page.title,
+                "content": page.content,
+                "page_number": page.page_number,
+                "updated_at": page.updated_at.isoformat()
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error updating page: {str(e)}"}), 500
+
+@routes.route('/api/notes/<int:notes_id>/pages/<int:page_id>', methods=['DELETE'])
+@role_required('user')
+def delete_note_page(notes_id, page_id):
+    """Delete a note page"""
+    try:
+        verify_jwt_in_request()
+        claims = get_jwt()
+        user_email = claims.get('sub')
+        user = User.query.filter_by(email=user_email).first()
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        notes = Notes.query.filter_by(id=notes_id, user_id=user.id).first()
+        if not notes:
+            return jsonify({"message": "Notes not found"}), 404
+        
+        page = NotePage.query.filter_by(id=page_id, notes_id=notes_id).first()
+        if not page:
+            return jsonify({"message": "Page not found"}), 404
+        
+        # Don't allow deleting the last page
+        if len(notes.pages) <= 1:
+            return jsonify({"message": "Cannot delete the last page"}), 400
+        
+        db.session.delete(page)
+        notes.updated_at = datetime.datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({"message": "Page deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error deleting page: {str(e)}"}), 500

@@ -141,3 +141,37 @@ export const updateUser = (id, data) =>
   });
 export const deleteUser = (id) =>
   apiFetch(`/delete_users/${id}`, { method: "DELETE" });
+
+// Notes
+export const getNotes = () => apiFetch("/api/notes");
+export const createNotes = (data) =>
+  apiFetch("/api/notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+export const getNotesDetail = (notesId) => apiFetch(`/api/notes/${notesId}`);
+export const updateNotes = (notesId, data) =>
+  apiFetch(`/api/notes/${notesId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+export const deleteNotes = (notesId) =>
+  apiFetch(`/api/notes/${notesId}`, { method: "DELETE" });
+
+// Note Pages
+export const createNotePage = (notesId, data) =>
+  apiFetch(`/api/notes/${notesId}/pages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+export const updateNotePage = (notesId, pageId, data) =>
+  apiFetch(`/api/notes/${notesId}/pages/${pageId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+export const deleteNotePage = (notesId, pageId) =>
+  apiFetch(`/api/notes/${notesId}/pages/${pageId}`, { method: "DELETE" });

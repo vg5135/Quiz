@@ -122,3 +122,32 @@ class Score(db.Model):
 
     def __repr__(self):
         return f"<Score User:{self.user_id} Quiz:{self.quiz_id} Score:{self.score}>"
+
+# ----------------------
+# Notes Table
+# ----------------------
+class Notes(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    pages = db.relationship('NotePage', backref='notes', lazy=True, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"<Notes {self.title}>"
+
+# ----------------------
+# NotePage Table
+# ----------------------
+class NotePage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    notes_id = db.Column(db.Integer, db.ForeignKey('notes.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text)
+    page_number = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<NotePage {self.title}>"
